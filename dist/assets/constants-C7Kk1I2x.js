@@ -1,0 +1,1 @@
+const e=[{id:"mtn",name:"MTN",color:"bg-yellow-400",text:"text-black"},{id:"airtel",name:"Airtel",color:"bg-red-600",text:"text-white"},{id:"glo",name:"Glo",color:"bg-green-600",text:"text-white"},{id:"9mobile",name:"9mobile",color:"bg-emerald-900",text:"text-white"}];export{e as N};
