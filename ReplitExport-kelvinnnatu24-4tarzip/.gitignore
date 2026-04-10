@@ -1,0 +1,15 @@
+# Replit-specific
+.replit
+replit.nix
+.cache/
+.config/
+.agents/
+.local/
+
+# Zip uploads
+zipFile.zip
+attached_assets/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Kosi Bills platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "balance": { "type": "number" },
+        "tier": { "type": "string", "enum": ["Basic", "Silver", "Gold", "Premium"] },
+        "isBiometricEnabled": { "type": "boolean" },
+        "isLiveMode": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "profilePhoto": { "type": "string" },
+        "accountStatus": { "type": "string", "enum": ["active", "frozen"] },
+        "kycLevel": { "type": "integer" },
+        "currency": { "type": "string" },
+        "isAgent": { "type": "boolean" },
+        "isAdmin": { "type": "boolean" },
+        "isCustomerCare": { "type": "boolean" },
+        "referralCode": { "type": "string" },
+        "hideBalance": { "type": "boolean" },
+        "dailyTransferLimit": { "type": "number" },
+        "dailyWithdrawalLimit": { "type": "number" },
+        "totalReferred": { "type": "integer" },
+        "bvn": { "type": "string" },
+        "lastLoginAt": { "type": "string", "format": "date-time" },
+        "twoFactorEnabled": { "type": "boolean" },
+        "isEmailVerified": { "type": "boolean" },
+        "isPhoneVerified": { "type": "boolean" },
+        "emailReceiptsEnabled": { "type": "boolean" }
+      },
+      "required": ["id", "name", "email"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    }
+  }
+}
