@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Smartphone, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
@@ -26,7 +27,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     
     setIsLoading(true);
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, phone: cleanPhone })
@@ -59,7 +60,7 @@ export default function Onboarding({ user, onComplete }: OnboardingProps) {
     
     setIsLoading(true);
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, pin })

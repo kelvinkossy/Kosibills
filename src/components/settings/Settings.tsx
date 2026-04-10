@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import React, { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -70,7 +71,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
   const handleAddBeneficiary = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/beneficiaries', {
+      const response = await apiFetch('/api/beneficiaries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...newBeneficiary, userId: user.id })
@@ -90,7 +91,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
 
   const handleDeleteBeneficiary = async (id: number) => {
     try {
-      const response = await fetch(`/api/beneficiaries/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`/api/beneficiaries/${id}`, { method: 'DELETE' });
       const data = await response.json();
       if (data.success) {
         toast.success('Beneficiary deleted');
@@ -109,7 +110,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
   const handleSendOtp = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/send-otp', {
+      const response = await apiFetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: user.phone })
@@ -132,7 +133,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/verify-otp', {
+      const response = await apiFetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: user.phone, otp })
@@ -164,7 +165,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
     if (!window.confirm(`Are you sure you want to ${newValue ? 'enable' : 'disable'} Live Mode? Real funds will be used in Live Mode.`)) return;
     
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, isLiveMode: newValue })
@@ -199,7 +200,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
   const handleToggleHideBalance = async () => {
     const newValue = !hideBalance;
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, hideBalance: newValue })
@@ -217,7 +218,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
 
   const updateBiometricSetting = async (enabled: boolean) => {
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, isBiometricEnabled: enabled })
@@ -241,7 +242,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
     const newValue = !is2FAEnabled;
     setIs2FAEnabled(newValue);
     try {
-      const response = await fetch('/api/auth/2fa/toggle', {
+      const response = await apiFetch('/api/auth/2fa/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: newValue })
@@ -264,7 +265,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
     const newValue = !emailReceiptsEnabled;
     setEmailReceiptsEnabled(newValue);
     try {
-      const response = await fetch('/api/user/toggle-email-receipts', {
+      const response = await apiFetch('/api/user/toggle-email-receipts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: newValue })
@@ -286,7 +287,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
   const handleUpgradeTier = async (tierName: AccountTier) => {
     if (user.tier === tierName) return;
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, tier: tierName })
@@ -317,7 +318,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
     }
     setIsLoading(true);
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, password: passwordData.new })
@@ -347,7 +348,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
     setIsLoading(true);
     try {
       // First verify the current password
-      const authResponse = await fetch('/api/auth/login', {
+      const authResponse = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, password: pinData.current })
@@ -361,7 +362,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
       }
 
       // If password is correct, update the PIN
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, pin: pinData.new })
@@ -393,7 +394,7 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
     reader.onloadend = async () => {
       const base64String = reader.result as string;
       try {
-        const response = await fetch('/api/user/update', {
+        const response = await apiFetch('/api/user/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user.id, profilePhoto: base64String })

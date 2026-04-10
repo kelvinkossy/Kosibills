@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState, FormEvent, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -42,7 +43,7 @@ export default function ResetPassword({ onComplete }: ResetPasswordProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await apiFetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, newPassword })

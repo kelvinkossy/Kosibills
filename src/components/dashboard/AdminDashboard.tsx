@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState, useEffect, useMemo } from 'react';
 import { User } from '../../types';
 import { motion } from 'motion/react';
@@ -116,7 +117,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await apiFetch('/api/admin/settings', {
         headers: { 'x-admin-id': user.id },
         credentials: 'include'
       });
@@ -133,7 +134,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/admin/stats', {
+      const res = await apiFetch('/api/admin/stats', {
         headers: { 'x-admin-id': user.id },
         credentials: 'include'
       });
@@ -160,7 +161,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
       if (activeTab === 'agents') role = 'agents';
       if (activeTab === 'customer_care') role = 'customer_care';
 
-      const res = await fetch(`/api/admin/users?page=${page}&limit=${PAGE_SIZE}&search=${search}&role=${role}&sortBy=${sort}&sortOrder=${order}`, {
+      const res = await apiFetch(`/api/admin/users?page=${page}&limit=${PAGE_SIZE}&search=${search}&role=${role}&sortBy=${sort}&sortOrder=${order}`, {
         headers: { 'x-admin-id': user.id },
         credentials: 'include'
       });
@@ -187,7 +188,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
 
   const fetchTransactions = async (page = 1, search = '', status = 'all', type = 'all', sort = sortBy, order = sortOrder) => {
     try {
-      const res = await fetch(`/api/admin/transactions?page=${page}&limit=${PAGE_SIZE}&search=${search}&status=${status}&type=${type}&sortBy=${sort}&sortOrder=${order}`, {
+      const res = await apiFetch(`/api/admin/transactions?page=${page}&limit=${PAGE_SIZE}&search=${search}&status=${status}&type=${type}&sortBy=${sort}&sortOrder=${order}`, {
         headers: { 'x-admin-id': user.id },
         credentials: 'include'
       });
@@ -211,7 +212,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
 
   const fetchTickets = async () => {
     try {
-      const res = await fetch('/api/support/tickets', {
+      const res = await apiFetch('/api/support/tickets', {
         headers: { 'x-cc-id': user.id },
         credentials: 'include'
       });
@@ -233,7 +234,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch('/api/admin/logs', {
+      const res = await apiFetch('/api/admin/logs', {
         headers: { 'x-admin-id': user.id },
         credentials: 'include'
       });
@@ -255,7 +256,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
 
   const fetchTicketMessages = async (ticketId: number) => {
     try {
-      const res = await fetch(`/api/support/tickets/${ticketId}/messages`, {
+      const res = await apiFetch(`/api/support/tickets/${ticketId}/messages`, {
         headers: { 'x-cc-id': user.id },
         credentials: 'include'
       });
@@ -279,7 +280,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
 
     setIsReplying(true);
     try {
-      const res = await fetch(`/api/support/tickets/${selectedTicket.id}/messages`, {
+      const res = await apiFetch(`/api/support/tickets/${selectedTicket.id}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -345,7 +346,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
   const toggleUserStatus = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'frozen' : 'active';
     try {
-      const res = await fetch(`/api/admin/users/${userId}/status`, {
+      const res = await apiFetch(`/api/admin/users/${userId}/status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -366,7 +367,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
 
   const updateUserRole = async (userId: string, role: string) => {
     try {
-      const res = await fetch(`/api/admin/users/${userId}/role`, {
+      const res = await apiFetch(`/api/admin/users/${userId}/role`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -406,7 +407,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await apiFetch('/api/admin/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -435,7 +436,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/users/${fundData.userId}/fund`, {
+      const res = await apiFetch(`/api/admin/users/${fundData.userId}/fund`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -468,7 +469,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
     e.preventDefault();
     setIsBroadcasting(true);
     try {
-      const res = await fetch('/api/admin/broadcast', {
+      const res = await apiFetch('/api/admin/broadcast', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -494,7 +495,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
     e.preventDefault();
     setIsSavingSettings(true);
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await apiFetch('/api/admin/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -519,7 +520,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
     e.preventDefault();
     setIsSendingEmail(true);
     try {
-      const res = await fetch('/api/admin/send-email', {
+      const res = await apiFetch('/api/admin/send-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -545,7 +546,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
     if (!confirm(`Are you sure you want to delete the setting "${key}"?`)) return;
     
     try {
-      const res = await fetch(`/api/admin/settings/${key}`, {
+      const res = await apiFetch(`/api/admin/settings/${key}`, {
         method: 'DELETE',
         headers: {
           'x-admin-id': user.id
@@ -1094,7 +1095,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
                   setIsGeneratingVapid(true);
                   setGeneratedVapidKeys(null);
                   try {
-                    const res = await fetch('/api/admin/generate-vapid', {
+                    const res = await apiFetch('/api/admin/generate-vapid', {
                       headers: { 'x-admin-id': user.id },
                       credentials: 'include'
                     });
@@ -1226,7 +1227,7 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
                   setAiMessages(prev => [...prev, { role: 'user', text: userMsg }]);
                   setAiLoading(true);
                   try {
-                    const res = await fetch('/api/support/ai-chat', {
+                    const res = await apiFetch('/api/support/ai-chat', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ message: userMsg, context: 'admin' }),

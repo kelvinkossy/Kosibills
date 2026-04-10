@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Wallet, Plus, Users, Shield, ArrowRight, X, Loader2 } from 'lucide-react';
@@ -45,7 +46,7 @@ export default function SubWallets({ user, onUpdate }: SubWalletsProps) {
 
   const fetchWallets = async () => {
     try {
-      const response = await fetch(`/api/sub-wallets/${user.id}`);
+      const response = await apiFetch(`/api/sub-wallets/${user.id}`);
       const data = await response.json();
       if (data.success) {
         setOwnedWallets(data.owned);
@@ -67,7 +68,7 @@ export default function SubWallets({ user, onUpdate }: SubWalletsProps) {
     if (!newWalletName.trim()) return;
     
     try {
-      const response = await fetch('/api/sub-wallets/create', {
+      const response = await apiFetch('/api/sub-wallets/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ownerId: user.id, name: newWalletName })
@@ -91,7 +92,7 @@ export default function SubWallets({ user, onUpdate }: SubWalletsProps) {
     if (!fundAmount || isNaN(Number(fundAmount)) || Number(fundAmount) <= 0) return;
     
     try {
-      const response = await fetch('/api/sub-wallets/fund', {
+      const response = await apiFetch('/api/sub-wallets/fund', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, subWalletId: showFundModal, amount: Number(fundAmount) })
@@ -119,7 +120,7 @@ export default function SubWallets({ user, onUpdate }: SubWalletsProps) {
     }
     
     try {
-      const response = await fetch('/api/sub-wallets/add-member', {
+      const response = await apiFetch('/api/sub-wallets/add-member', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

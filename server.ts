@@ -414,8 +414,10 @@ const hashPin = (pin: string) => {
 
 const verifyPin = (pin: string, hash: string) => {
   if (!hash) return false;
-  // Support legacy plain-text PINs (4-digit numbers not starting with $2)
-  if (!hash.startsWith('$2')) return hash === pin;
+  if (!hash.startsWith('$2')) {
+    logger.warn('[SECURITY] Rejecting legacy plaintext PIN — please have user reset their PIN');
+    return false;
+  }
   return bcrypt.compareSync(pin, hash);
 };
 
@@ -693,6 +695,32 @@ async function startServer() {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict'
     } 
+  });
+
+  // Auth routes that legitimately have no CSRF token yet
+  const CSRF_EXEMPT_PATHS = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/google',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/verify-2fa',
+    '/api/auth/refresh-token',
+    '/api/auth/send-otp',
+    '/api/auth/verify-otp',
+    '/api/csrf-token',
+  ];
+
+  // Apply CSRF to all state-changing requests except exempt auth routes
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+    if (CSRF_EXEMPT_PATHS.includes(req.path)) return next();
+    return csrfProtection(req, res, next);
+  });
+
+  // CSRF token endpoint — client calls this once to get a valid token
+  app.get('/api/csrf-token', csrfProtection, (req: any, res) => {
+    res.json({ token: req.csrfToken() });
   });
 
   // Termii SMS Helper
@@ -2188,6 +2216,12 @@ async function startServer() {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Escape HTML to prevent XSS from admin-supplied message content
+    const escapeHtml = (str: string) =>
+      str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+         .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+
     try {
       sendEmail(
         targetEmail,
@@ -2196,7 +2230,7 @@ async function startServer() {
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px;">
           <h2 style="color: #10b981;">Message from Kosi Bills Admin</h2>
           <div style="margin: 20px 0; border-top: 1px solid #e5e7eb; padding-top: 20px; line-height: 1.6;">
-            ${message.replace(/\n/g, '<br>')}
+            ${safeMessage}
           </div>
           <p style="font-size: 12px; color: #6b7280; text-align: center; margin-top: 30px;">
             This is an official communication from Kosi Bills.
@@ -2246,7 +2280,7 @@ async function startServer() {
   app.post('/api/admin/users/:id/role', requireAdmin, (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
-    const adminId = req.headers['x-admin-id'];
+    const adminId = Number((req as any).user.id);
     
     try {
       let isAgent = 0;
@@ -2269,7 +2303,7 @@ async function startServer() {
         );
       }
 
-      logAdminAction(parseInt(adminId as string), `user_role_change_${role}`, parseInt(id), `Changed user ${id} role to ${role}`);
+      logAdminAction(adminId, `user_role_change_${role}`, parseInt(id), `Changed user ${id} role to ${role}`);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to update user role' });
@@ -2306,7 +2340,7 @@ async function startServer() {
   app.post('/api/admin/users/:id/fund', requireAdmin, (req, res) => {
     const { id } = req.params;
     const { amount, type, description } = req.body;
-    const adminId = parseInt(req.headers['x-admin-id'] as string);
+    const adminId = Number((req as any).user.id);
     
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
     if (!['credit', 'debit'].includes(type)) return res.status(400).json({ error: 'Invalid transaction type' });
@@ -2834,7 +2868,7 @@ Kosi Bills is a Nigerian fintech app that lets users pay all their bills from on
 
   app.post('/api/admin/settings', requireAdmin, (req, res) => {
     const { settings } = req.body;
-    const adminId = parseInt(req.headers['x-admin-id'] as string);
+    const adminId = Number((req as any).user.id);
     try {
       db.transaction(() => {
         const stmt = db.prepare('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)');
@@ -2851,7 +2885,7 @@ Kosi Bills is a Nigerian fintech app that lets users pay all their bills from on
 
   app.delete('/api/admin/settings/:key', requireAdmin, (req, res) => {
     const { key } = req.params;
-    const adminId = parseInt(req.headers['x-admin-id'] as string);
+    const adminId = Number((req as any).user.id);
     try {
       db.prepare('DELETE FROM system_settings WHERE key = ?').run(key);
       logAdminAction(adminId, 'delete_setting', 0, `Deleted system setting: ${key}`);
@@ -2864,7 +2898,7 @@ Kosi Bills is a Nigerian fintech app that lets users pay all their bills from on
   // Admin Broadcast
   app.post('/api/admin/broadcast', requireAdmin, (req, res) => {
     const { title, message, target } = req.body;
-    const adminId = parseInt(req.headers['x-admin-id'] as string);
+    const adminId = Number((req as any).user.id);
     
     if (!title || !message) return res.status(400).json({ error: 'Title and message required' });
 
@@ -3040,6 +3074,15 @@ Kosi Bills is a Nigerian fintech app that lets users pay all their bills from on
   } else {
     app.use(express.static('dist'));
   }
+
+  // CSRF Error Handler — must come before the global error handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err.code === 'EBADCSRFTOKEN') {
+      logger.warn('[CSRF] Invalid or missing CSRF token', { path: req.path, ip: req.ip });
+      return res.status(403).json({ error: 'Invalid or missing CSRF token. Please refresh and try again.' });
+    }
+    next(err);
+  });
 
   // Global Error Handler Middleware
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

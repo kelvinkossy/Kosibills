@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState, useEffect, useRef } from 'react';
 import { User } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -60,7 +61,7 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
 
   const fetchMessages = async (ticketId: string) => {
     try {
-      const res = await fetch(`/api/support/tickets/${ticketId}/messages`, {
+      const res = await apiFetch(`/api/support/tickets/${ticketId}/messages`, {
         headers: { 'x-cc-id': user.id }, credentials: 'include'
       });
       const data = await res.json();
@@ -87,7 +88,7 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
     if (!replyText.trim() || !selectedTicket) return;
     setIsSending(true);
     try {
-      const res = await fetch(`/api/support/tickets/${selectedTicket.id}/messages`, {
+      const res = await apiFetch(`/api/support/tickets/${selectedTicket.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-cc-id': user.id },
         body: JSON.stringify({ senderId: user.id, message: replyText })
@@ -106,7 +107,7 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
     if (!selectedTicket) return;
     setIsUpdatingStatus(true);
     try {
-      const res = await fetch(`/api/support/tickets/${selectedTicket.id}/status`, {
+      const res = await apiFetch(`/api/support/tickets/${selectedTicket.id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-cc-id': user.id },
         body: JSON.stringify({ status: selectedTicket.status === 'open' ? 'closed' : 'open' })
@@ -130,7 +131,7 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
   const handleResetPassword = async (userId: string, userName: string) => {
     if (!confirm(`Reset password for ${userName}?`)) return;
     try {
-      const res = await fetch(`/api/customer-care/users/${userId}/reset-password`, {
+      const res = await apiFetch(`/api/customer-care/users/${userId}/reset-password`, {
         method: 'POST', headers: { 'x-cc-id': user.id }, credentials: 'include'
       });
       const data = await res.json();
@@ -143,7 +144,7 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
     const action = currentStatus === 'frozen' ? 'unfreeze' : 'freeze';
     if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${userName}'s account?`)) return;
     try {
-      const res = await fetch(`/api/customer-care/users/${userId}/freeze`, {
+      const res = await apiFetch(`/api/customer-care/users/${userId}/freeze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-cc-id': user.id },
         body: JSON.stringify({ freeze: currentStatus !== 'frozen' }),

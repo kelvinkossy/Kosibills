@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -36,7 +37,7 @@ export default function Transfer({ user, setView, setUser }: TransferProps) {
     if (!phone.trim()) { toast.error('Enter a phone number'); return; }
     setIsLoading(true);
     try {
-      const r = await fetch(`/api/users/find?phone=${encodeURIComponent(phone.trim())}`, { credentials: 'include' });
+      const r = await apiFetch(`/api/users/find?phone=${encodeURIComponent(phone.trim())}`, { credentials: 'include' });
       const d = await r.json();
       if (r.ok && d.user) {
         if (d.user.id === user.id) { toast.error("You can't transfer to yourself"); return; }
@@ -62,7 +63,7 @@ export default function Transfer({ user, setView, setUser }: TransferProps) {
     if (pin.length !== 4) { toast.error('Enter your 4-digit PIN'); return; }
     setIsLoading(true);
     try {
-      const r = await fetch('/api/transfer', {
+      const r = await apiFetch('/api/transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

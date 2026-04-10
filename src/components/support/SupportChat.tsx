@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Send, MessageCircle, User as UserIcon, Loader2 } from 'lucide-react';
@@ -70,7 +71,7 @@ export default function SupportChat({ user }: SupportChatProps) {
                          input.toLowerCase().includes('real person');
 
       if (wantsHuman) {
-        const res = await fetch('/api/support/tickets', {
+        const res = await apiFetch('/api/support/tickets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user.id, subject: 'User requested human agent', initialMessage: input })
@@ -89,7 +90,7 @@ export default function SupportChat({ user }: SupportChatProps) {
           }]);
         }
       } else {
-        const res = await fetch('/api/support/ai-chat', {
+        const res = await apiFetch('/api/support/ai-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: input })

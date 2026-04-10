@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -69,7 +70,7 @@ export default function PinModal({ onSuccess, onCancel, isBiometricEnabled = fal
       if (!userStr) throw new Error('User session not found');
       const user = JSON.parse(userStr);
 
-      const response = await fetch('/api/user/verify-pin', {
+      const response = await apiFetch('/api/user/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, pin: enteredPin })

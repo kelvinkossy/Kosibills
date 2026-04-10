@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import React, { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -83,7 +84,7 @@ export default function Internet({ user, setUser, setView, retryData, clearRetry
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/payments/pay', {
+      const response = await apiFetch('/api/payments/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

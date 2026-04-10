@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -50,7 +51,7 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      const response = await fetch('/api/auth/google', {
+      const response = await apiFetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: user.displayName, email: user.email, profilePhoto: user.photoURL, uid: user.uid })
@@ -80,7 +81,7 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
     setIsLoading(true);
     try {
       if (is2FAMode) {
-        const r = await fetch('/api/auth/verify-2fa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: twoFactorEmail, code: twoFactorCode }) });
+        const r = await apiFetch('/api/auth/verify-2fa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: twoFactorEmail, code: twoFactorCode }) });
         const d = await r.json();
         if (r.ok) { onLogin(d.user); toast.success('Logged in!'); } else { setError(d.error || 'Verification failed'); }
         return;

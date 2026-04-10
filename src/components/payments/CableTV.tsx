@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState, FormEvent, useEffect } from 'react';
 import { Tv, CheckCircle2, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -70,7 +71,7 @@ export default function CableTV({ user, setUser, setView, retryData, clearRetryD
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/payments/pay', {
+      const response = await apiFetch('/api/payments/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

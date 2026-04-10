@@ -1,3 +1,4 @@
+import { apiFetch, getCsrfToken } from './utils/api';
 import { useState, useEffect, useRef, lazy, Suspense, Component, ErrorInfo, ReactNode } from 'react';
 import { 
   LayoutDashboard, 
@@ -128,6 +129,9 @@ function AppContent() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
+    // Pre-fetch CSRF token so it's ready for any mutating request
+    getCsrfToken().catch(() => {});
+
     const urlParams = new URLSearchParams(window.location.search);
     if (window.location.pathname === '/reset-password' || urlParams.has('token')) {
       setAppState('reset-password');
@@ -222,7 +226,7 @@ function AppContent() {
         if (!user?.id) return;
         
         try {
-          const res = await fetch(`${window.location.origin}/api/notifications/${user.id}`, { credentials: 'include' });
+          const res = await apiFetch(`${window.location.origin}/api/notifications/${user.id}`, { credentials: 'include' });
           
           if (res.status === 401 || res.status === 403) {
             handleLogout();
@@ -259,7 +263,7 @@ function AppContent() {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     if (user) {
       try {
-        await fetch(`/api/notifications/${user.id}/read/${id}`, { method: 'PUT', credentials: 'include' });
+        await apiFetch(`/api/notifications/${user.id}/read/${id}`, { method: 'PUT', credentials: 'include' });
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
       }
@@ -276,7 +280,7 @@ function AppContent() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     if (user) {
       try {
-        await fetch(`/api/notifications/${user.id}/read`, { method: 'PUT', credentials: 'include' });
+        await apiFetch(`/api/notifications/${user.id}/read`, { method: 'PUT', credentials: 'include' });
       } catch (error) {
         console.error('Failed to mark all notifications as read:', error);
       }
@@ -289,7 +293,7 @@ function AppContent() {
     setNotifications([]);
     if (user) {
       try {
-        await fetch(`/api/notifications/${user.id}`, { method: 'DELETE', credentials: 'include' });
+        await apiFetch(`/api/notifications/${user.id}`, { method: 'DELETE', credentials: 'include' });
         toast.success('All notifications deleted');
       } catch (error) {
         console.error('Failed to delete all notifications:', error);
@@ -359,7 +363,7 @@ function AppContent() {
             applicationServerKey: vapidPublicKey
           });
 
-          await fetch('/api/notifications/subscribe', {
+          await apiFetch('/api/notifications/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: user.id, subscription })
@@ -468,7 +472,7 @@ function AppContent() {
       case 'history': return <History user={user} initialTransactionId={selectedTransactionId} onTransactionViewed={() => setSelectedTransactionId(undefined)} onRetry={(view, data) => { setRetryData(data); navigateTo(view); }} />;
       case 'sub-wallets': return <SubWallets user={user} onUpdate={async () => {
         try {
-          const res = await fetch(`/api/user/${user.id}`, { credentials: 'include' });
+          const res = await apiFetch(`/api/user/${user.id}`, { credentials: 'include' });
           const data = await res.json();
           if (data.success) updateUser(data.user);
         } catch (e) {

@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -65,13 +66,13 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
 
   const fetchRecent = async () => {
     try {
-      const response = await fetch(`/api/transactions/${user.id}`, { credentials: 'include' });
+      const response = await apiFetch(`/api/transactions/${user.id}`, { credentials: 'include' });
       const data = await response.json();
       if (data.success) {
         setRecentTransactions((data.transactions || []).slice(0, 5));
       }
       
-      const swResponse = await fetch(`/api/sub-wallets/${user.id}`, { credentials: 'include' });
+      const swResponse = await apiFetch(`/api/sub-wallets/${user.id}`, { credentials: 'include' });
       const swData = await swResponse.json();
       if (swData.success) {
         setSubWallets([...(swData.owned || []), ...(swData.shared || [])].slice(0, 2));
@@ -93,7 +94,7 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
   const handleRefresh = async () => {
     setIsLoading(true);
     try {
-      const userResponse = await fetch(`/api/user/${user.id}`, { credentials: 'include' });
+      const userResponse = await apiFetch(`/api/user/${user.id}`, { credentials: 'include' });
       const userData = await userResponse.json();
       if (userData.success) {
         setUser(userData.user);
@@ -144,7 +145,7 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
       callback: async (data: any) => {
         setIsFunding(true);
         try {
-          const response = await fetch('/api/payments/verify', {
+          const response = await apiFetch('/api/payments/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -158,7 +159,7 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
             setUser(result.user);
             storage.set('kosi_user', JSON.stringify(result.user));
             toast.success("Wallet funded successfully!");
-            const txResponse = await fetch(`/api/transactions/${user.id}`);
+            const txResponse = await apiFetch(`/api/transactions/${user.id}`);
             const txData = await txResponse.json();
             if (txData.success) setRecentTransactions((txData.transactions || []).slice(0, 5));
           } else {
@@ -239,7 +240,7 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
   const toggleBalanceVisibility = async () => {
     const newValue = !hideBalance;
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, hideBalance: newValue })
@@ -276,7 +277,7 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
 
     setIsSettingPin(true);
     try {
-      const response = await fetch('/api/user/update', {
+      const response = await apiFetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, pin: pinValue })

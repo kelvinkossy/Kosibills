@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState, useEffect, useMemo } from 'react';
 import { 
   ArrowUpRight, 
@@ -37,7 +38,7 @@ export default function History({ user, initialTransactionId, onTransactionViewe
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await fetch(`/api/transactions/${user.id}`);
+        const response = await apiFetch(`/api/transactions/${user.id}`);
         const data = await response.json();
         if (data.success) {
           setTransactions(data.transactions || []);

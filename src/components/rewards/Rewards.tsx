@@ -1,3 +1,4 @@
+import { apiFetch } from '../../utils/api';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Gift, Award, Star, Users, Share2, Copy, Loader2, ChevronRight, Zap, TrendingUp, ShieldCheck } from 'lucide-react';
@@ -75,7 +76,7 @@ export default function Rewards({ user }: RewardsProps) {
   };
   const handleApplyAgent = async () => {
     try {
-      const r = await fetch('/api/user/apply-agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id }) });
+      const r = await apiFetch('/api/user/apply-agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id }) });
       const d = await r.json();
       if (d.success) toast.success('Application submitted! We will contact you soon.');
       else toast.error(d.error || 'Failed to submit application');
