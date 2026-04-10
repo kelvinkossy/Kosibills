@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
 import { Send, Search, User as UserIcon, Lock, Loader2, CheckCircle2, ArrowLeft, AlertCircle } from 'lucide-react';
-import { User } from '../../types';
+import { User, View } from '../../types';
 
 interface TransferProps {
   user: User;
-  setView: (view: any) => void;
+  setView: (view: View) => void;
   setUser: (user: User) => void;
 }
 
@@ -36,7 +36,7 @@ export default function Transfer({ user, setView, setUser }: TransferProps) {
     if (!phone.trim()) { toast.error('Enter a phone number'); return; }
     setIsLoading(true);
     try {
-      const r = await fetch(`/api/users/find?phone=${encodeURIComponent(phone.trim())}`);
+      const r = await fetch(`/api/users/find?phone=${encodeURIComponent(phone.trim())}`, { credentials: 'include' });
       const d = await r.json();
       if (r.ok && d.user) {
         if (d.user.id === user.id) { toast.error("You can't transfer to yourself"); return; }
@@ -65,6 +65,7 @@ export default function Transfer({ user, setView, setUser }: TransferProps) {
       const r = await fetch('/api/transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ senderId: user.id, recipientId: foundUser!.id, amount: Number(amount), pin, note })
       });
       const d = await r.json();

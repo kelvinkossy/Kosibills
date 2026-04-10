@@ -75,7 +75,7 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
     }
     const cleanEmail = formData.email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) { setError('Enter a valid email address'); return; }
-    if (!isForgotMode && formData.password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (!isForgotMode && formData.password.length < 8) { setError('Password must be at least 8 characters'); return; }
 
     setIsLoading(true);
     try {

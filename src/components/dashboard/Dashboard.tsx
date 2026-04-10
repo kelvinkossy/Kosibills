@@ -65,13 +65,13 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
 
   const fetchRecent = async () => {
     try {
-      const response = await fetch(`/api/transactions/${user.id}`);
+      const response = await fetch(`/api/transactions/${user.id}`, { credentials: 'include' });
       const data = await response.json();
       if (data.success) {
         setRecentTransactions((data.transactions || []).slice(0, 5));
       }
       
-      const swResponse = await fetch(`/api/sub-wallets/${user.id}`);
+      const swResponse = await fetch(`/api/sub-wallets/${user.id}`, { credentials: 'include' });
       const swData = await swResponse.json();
       if (swData.success) {
         setSubWallets([...(swData.owned || []), ...(swData.shared || [])].slice(0, 2));
@@ -93,7 +93,7 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
   const handleRefresh = async () => {
     setIsLoading(true);
     try {
-      const userResponse = await fetch(`/api/user/${user.id}`);
+      const userResponse = await fetch(`/api/user/${user.id}`, { credentials: 'include' });
       const userData = await userResponse.json();
       if (userData.success) {
         setUser(userData.user);

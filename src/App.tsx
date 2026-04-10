@@ -468,7 +468,7 @@ function AppContent() {
       case 'history': return <History user={user} initialTransactionId={selectedTransactionId} onTransactionViewed={() => setSelectedTransactionId(undefined)} onRetry={(view, data) => { setRetryData(data); navigateTo(view); }} />;
       case 'sub-wallets': return <SubWallets user={user} onUpdate={async () => {
         try {
-          const res = await fetch(`/api/user/${user.id}`);
+          const res = await fetch(`/api/user/${user.id}`, { credentials: 'include' });
           const data = await res.json();
           if (data.success) updateUser(data.user);
         } catch (e) {

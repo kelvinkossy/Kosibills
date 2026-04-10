@@ -303,6 +303,23 @@ db.exec(`
     );
   `);
 
+  // Persistent OTP + 2FA code storage
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS otp_store (
+        phone TEXT PRIMARY KEY,
+        otp TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS two_factor_codes (
+        email TEXT PRIMARY KEY,
+        code TEXT NOT NULL,
+        user_id INTEGER NOT NULL,
+        expires_at TEXT NOT NULL
+      );
+    `);
+  } catch (e) { /* tables may already exist */ }
+
   db.exec(`
     INSERT OR IGNORE INTO rewards (id, title, points, icon, color, bg) VALUES 
     (1, '10% Off Airtime', 500, 'Star', 'text-amber-500', 'bg-amber-100 dark:bg-amber-900/30'),
@@ -344,13 +361,17 @@ db.exec(`
     }
   }
 
-  // Set admin
-  try {
-    db.prepare('UPDATE users SET is_admin = 1 WHERE email = ?').run('kelvinnnatu2@gmail.com');
-    // Demote previous bootstrap admin if it exists
-    db.prepare('UPDATE users SET is_admin = 0 WHERE email = ? AND email != ?').run('kelvinkossy03@gmail.com', 'kelvinnnatu2@gmail.com');
-  } catch (e) {
-    console.error('Failed to set admin:', e);
+  // Set admin from environment variable (never hardcode admin emails)
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+  if (ADMIN_EMAIL) {
+    try {
+      db.prepare('UPDATE users SET is_admin = 1 WHERE email = ?').run(ADMIN_EMAIL);
+      logger.info('[STARTUP] Admin role granted to configured ADMIN_EMAIL', { email: ADMIN_EMAIL });
+    } catch (e) {
+      logger.error('[STARTUP] Failed to set admin from ADMIN_EMAIL', { e });
+    }
+  } else {
+    logger.warn('[STARTUP] ADMIN_EMAIL env var not set. Admin must be assigned manually via the admin panel or DB.');
   }
 
   // Create unique index separately to handle potential duplicates gracefully
@@ -758,16 +779,34 @@ async function startServer() {
   };
 
   // API Routes
-  const otpStore = new Map<string, string>(); // In-memory store for OTPs
-  const twoFactorStore = new Map<string, { code: string, userId: number, email: string }>(); // Store for 2FA codes
+  // DB-backed OTP helpers (survive server restarts)
+  const saveOtp = (phone: string, otp: string) => {
+    const expiresAt = new Date(Date.now() + 600000).toISOString();
+    db.prepare('INSERT OR REPLACE INTO otp_store (phone, otp, expires_at) VALUES (?, ?, ?)').run(phone, otp, expiresAt);
+  };
+  const verifyAndConsumeOtp = (phone: string, otp: string): boolean => {
+    const row = db.prepare('SELECT otp FROM otp_store WHERE phone = ? AND expires_at > ?').get(phone, new Date().toISOString()) as any;
+    if (!row || row.otp !== otp) return false;
+    db.prepare('DELETE FROM otp_store WHERE phone = ?').run(phone);
+    return true;
+  };
+  const save2FA = (email: string, code: string, userId: number) => {
+    const expiresAt = new Date(Date.now() + 300000).toISOString();
+    db.prepare('INSERT OR REPLACE INTO two_factor_codes (email, code, user_id, expires_at) VALUES (?, ?, ?, ?)').run(email, code, userId, expiresAt);
+  };
+  const consume2FA = (email: string, code: string): { userId: number } | null => {
+    const row = db.prepare('SELECT user_id FROM two_factor_codes WHERE email = ? AND code = ? AND expires_at > ?').get(email, code, new Date().toISOString()) as any;
+    if (!row) return null;
+    db.prepare('DELETE FROM two_factor_codes WHERE email = ?').run(email);
+    return { userId: row.user_id };
+  };
 
   app.post('/api/auth/send-otp', async (req, res) => {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: 'Phone number required' });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore.set(phone, otp);
-    setTimeout(() => otpStore.delete(phone), 600000); // Expire in 10 mins
+    saveOtp(phone, otp);
     
     const message = `Your Kosi Bills OTP is ${otp}. Valid for 10 minutes.`;
 
@@ -781,8 +820,7 @@ async function startServer() {
 
   app.post('/api/auth/verify-otp', (req, res) => {
     const { phone, otp } = req.body;
-    if (otpStore.get(phone) === otp) {
-      otpStore.delete(phone);
+    if (verifyAndConsumeOtp(phone, otp)) {
       res.json({ success: true, message: 'OTP verified successfully' });
     } else {
       res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
@@ -839,7 +877,7 @@ async function startServer() {
       txStmt.run(info.lastInsertRowid, 'Wallet Fund', 'Account Created', 0, new Date().toISOString(), 'success');
 
       let isAdmin = false;
-      if (email === 'kelvinnnatu2@gmail.com') {
+      if (ADMIN_EMAIL && email === ADMIN_EMAIL) {
         db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(info.lastInsertRowid);
         isAdmin = true;
       }
@@ -976,7 +1014,7 @@ async function startServer() {
         db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').run(new Date().toISOString(), user.id);
       }
       
-      if (email === 'kelvinnnatu2@gmail.com' && !user.is_admin) {
+      if (ADMIN_EMAIL && email === ADMIN_EMAIL && !user.is_admin) {
         db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(user.id);
         user.is_admin = 1;
       }
@@ -1034,7 +1072,7 @@ async function startServer() {
     const user = stmt.get(email) as any;
     
     if (user && verifyPassword(password, user.password)) {
-      if (email === 'kelvinnnatu2@gmail.com' && !user.is_admin) {
+      if (ADMIN_EMAIL && email === ADMIN_EMAIL && !user.is_admin) {
         db.prepare('UPDATE users SET is_admin = 1, last_login_at = ? WHERE id = ?').run(new Date().toISOString(), user.id);
         user.is_admin = 1;
       } else {
@@ -1067,8 +1105,7 @@ async function startServer() {
       const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
       if (mappedUser.twoFactorEnabled && smtpConfigured) {
         const twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
-        twoFactorStore.set(mappedUser.email, { code: twoFactorCode, userId: mappedUser.id, email: mappedUser.email });
-        setTimeout(() => twoFactorStore.delete(mappedUser.email), 300000); // 5 mins expiry
+        save2FA(mappedUser.email, twoFactorCode, mappedUser.id);
 
         sendEmail(
           mappedUser.email,
@@ -1232,14 +1269,13 @@ async function startServer() {
 
   app.post('/api/auth/verify-2fa', (req, res) => {
     const { email, code } = req.body;
-    const storedData = twoFactorStore.get(email);
+    const storedData = consume2FA(email, code);
 
-    if (!storedData || storedData.code !== code) {
+    if (!storedData) {
       return res.status(400).json({ error: 'Invalid or expired verification code' });
     }
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(storedData.userId) as any;
-    twoFactorStore.delete(email);
 
     const sessionToken = crypto.randomBytes(32).toString('hex');
     db.prepare('UPDATE users SET session_token = ? WHERE id = ?').run(sessionToken, user.id);
@@ -1473,34 +1509,39 @@ async function startServer() {
   });
 
   // Sub-Wallets Endpoints
-  app.get('/api/sub-wallets/:userId', (req, res) => {
-    const { userId } = req.params;
+  app.get('/api/sub-wallets/:userId', authenticateToken, (req: any, res) => {
+    // Enforce that a user can only fetch their own sub-wallets
+    const userId = req.user.id;
     try {
       // Get owned sub-wallets
-      const ownedStmt = db.prepare('SELECT * FROM sub_wallets WHERE owner_id = ?');
-      const owned = ownedStmt.all(userId);
+      const owned = db.prepare('SELECT * FROM sub_wallets WHERE owner_id = ?').all(userId);
 
-      // Get shared sub-wallets
-      const sharedStmt = db.prepare(`
+      // Get shared sub-wallets (user is a member but not owner)
+      const shared = db.prepare(`
         SELECT sw.*, swm.allowed_categories 
         FROM sub_wallets sw 
         JOIN sub_wallet_members swm ON sw.id = swm.sub_wallet_id 
         WHERE swm.user_id = ?
-      `);
-      const shared = sharedStmt.all(userId);
+      `).all(userId);
 
-      // Get members for owned sub-wallets
-      const membersStmt = db.prepare(`
-        SELECT swm.*, u.name, u.email 
-        FROM sub_wallet_members swm 
-        JOIN users u ON swm.user_id = u.id 
-        WHERE swm.sub_wallet_id = ?
-      `);
-      
-      const ownedWithMembers = owned.map((wallet: any) => ({
-        ...wallet,
-        members: membersStmt.all(wallet.id)
-      }));
+      // Fix N+1: fetch all members for all owned wallets in a single query
+      let ownedWithMembers: any[] = [];
+      if (owned.length > 0) {
+        const ids = (owned as any[]).map((w: any) => w.id);
+        const placeholders = ids.map(() => '?').join(',');
+        const allMembers = db.prepare(`
+          SELECT swm.*, u.name, u.email 
+          FROM sub_wallet_members swm 
+          JOIN users u ON swm.user_id = u.id 
+          WHERE swm.sub_wallet_id IN (${placeholders})
+        `).all(...ids);
+        const membersByWallet: Record<number, any[]> = {};
+        for (const m of allMembers as any[]) {
+          if (!membersByWallet[m.sub_wallet_id]) membersByWallet[m.sub_wallet_id] = [];
+          membersByWallet[m.sub_wallet_id].push(m);
+        }
+        ownedWithMembers = (owned as any[]).map((w: any) => ({ ...w, members: membersByWallet[w.id] || [] }));
+      }
 
       res.json({ success: true, owned: ownedWithMembers, shared });
     } catch (error) {
@@ -1508,8 +1549,9 @@ async function startServer() {
     }
   });
 
-  app.post('/api/sub-wallets/create', (req, res) => {
-    const { ownerId, name } = req.body;
+  app.post('/api/sub-wallets/create', authenticateToken, (req: any, res) => {
+    const { name } = req.body;
+    const ownerId = req.user.id; // taken from JWT, not body
     try {
       const stmt = db.prepare('INSERT INTO sub_wallets (owner_id, name, balance) VALUES (?, ?, 0)');
       const info = stmt.run(ownerId, name);
@@ -1519,14 +1561,15 @@ async function startServer() {
     }
   });
 
-  app.post('/api/sub-wallets/fund', (req, res) => {
-    const { userId, subWalletId, amount } = req.body;
+  app.post('/api/sub-wallets/fund', authenticateToken, (req: any, res) => {
+    const { subWalletId, amount } = req.body;
+    const userId = req.user.id; // taken from JWT, not body
     try {
       const updateMain = db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?');
       const updateSub = db.prepare('UPDATE sub_wallets SET balance = balance + ? WHERE id = ?');
       const insertTx = db.prepare('INSERT INTO transactions (user_id, type, description, amount, date, status, category, sub_wallet_id, balance_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
-      const transaction = db.transaction(() => {
+      const runTransaction = db.transaction(() => {
         const user = db.prepare('SELECT balance FROM users WHERE id = ?').get(userId) as any;
         if (!user || user.balance < amount) {
           throw new Error('Insufficient balance');
@@ -1538,9 +1581,8 @@ async function startServer() {
         insertTx.run(userId, 'Sub-Wallet Funding', `Funded sub-wallet #${subWalletId}`, -amount, new Date().toISOString(), 'success', 'Transfer', subWalletId, newBalance);
       });
 
-      transaction();
+      runTransaction();
       
-      // Create notification
       createNotification(userId, 'Sub-Wallet Funded', `You successfully funded sub-wallet #${subWalletId} with ₦${amount.toLocaleString()}`, 'success');
       
       res.json({ success: true });
@@ -1553,9 +1595,15 @@ async function startServer() {
     }
   });
 
-  app.post('/api/sub-wallets/add-member', (req, res) => {
+  app.post('/api/sub-wallets/add-member', authenticateToken, (req: any, res) => {
     const { subWalletId, email, allowedCategories } = req.body;
+    const requesterId = req.user.id;
     try {
+      // Ensure only the owner can add members
+      const wallet = db.prepare('SELECT owner_id FROM sub_wallets WHERE id = ?').get(subWalletId) as any;
+      if (!wallet) return res.status(404).json({ error: 'Sub-wallet not found' });
+      if (wallet.owner_id !== requesterId) return res.status(403).json({ error: 'Only the wallet owner can add members' });
+
       const user = db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
@@ -1569,7 +1617,6 @@ async function startServer() {
       const stmt = db.prepare('INSERT INTO sub_wallet_members (sub_wallet_id, user_id, allowed_categories) VALUES (?, ?, ?)');
       stmt.run(subWalletId, user.id, allowedCategories);
       
-      // Create notification for the added member
       createNotification(user.id, 'Added to Sub-Wallet', `You have been added as a member to sub-wallet #${subWalletId}`, 'info');
       
       res.json({ success: true });
@@ -1980,34 +2027,26 @@ async function startServer() {
     }
   };
 
-  // Middleware to check admin — verifies JWT AND admin role
+  // Middleware to check admin — verifies JWT and admin role (no x-admin-id header needed)
   const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const claimedId = req.headers['x-admin-id'];
-    if (!claimedId) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = verifyJwtId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const jwtId = verifyJwtId(req);
-    if (!jwtId || String(jwtId) !== String(claimedId)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    
-    const admin = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(claimedId) as any;
+    const admin = db.prepare('SELECT id, is_admin FROM users WHERE id = ?').get(userId) as any;
     if (!admin || !admin.is_admin) return res.status(403).json({ error: 'Forbidden' });
-    
+
+    (req as any).user = { id: userId };
     next();
   };
 
   const requireCustomerCare = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const claimedId = req.headers['x-cc-id'] || req.headers['x-admin-id'];
-    if (!claimedId) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = verifyJwtId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const jwtId = verifyJwtId(req);
-    if (!jwtId || String(jwtId) !== String(claimedId)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    
-    const cc = db.prepare('SELECT is_customer_care, is_admin FROM users WHERE id = ?').get(claimedId) as any;
+    const cc = db.prepare('SELECT id, is_customer_care, is_admin FROM users WHERE id = ?').get(userId) as any;
     if (!cc || (!cc.is_customer_care && !cc.is_admin)) return res.status(403).json({ error: 'Forbidden' });
-    
+
+    (req as any).user = { id: userId };
     next();
   };
 
@@ -2141,9 +2180,9 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/send-email', requireAdmin, (req, res) => {
+  app.post('/api/admin/send-email', requireAdmin, (req: any, res) => {
     const { targetEmail, subject, message } = req.body;
-    const adminId = Number(req.headers['x-admin-id']);
+    const adminId = Number(req.user.id);
 
     if (!targetEmail || !subject || !message) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -2190,14 +2229,14 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/users/:id/status', requireAdmin, (req, res) => {
+  app.post('/api/admin/users/:id/status', requireAdmin, (req: any, res) => {
     const { id } = req.params;
     const { status } = req.body; // 'active' or 'suspended'
-    const adminId = req.headers['x-admin-id'];
+    const adminId = req.user.id;
     
     try {
       db.prepare('UPDATE users SET account_status = ? WHERE id = ?').run(status, id);
-      logAdminAction(parseInt(adminId as string), `user_status_change_${status}`, parseInt(id), `Changed user ${id} status to ${status}`);
+      logAdminAction(adminId, `user_status_change_${status}`, parseInt(id), `Changed user ${id} status to ${status}`);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to update user status' });
