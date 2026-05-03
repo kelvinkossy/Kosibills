@@ -36,7 +36,7 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
     setLoading(true);
     try {
       const [uRes, tRes] = await Promise.all([
-        fetch('/api/admin/users?limit=200', { headers: { 'x-cc-id': user.id }, credentials: 'include' }),
+        fetch('/api/admin/users?limit=50', { headers: { 'x-cc-id': user.id }, credentials: 'include' }),
         fetch('/api/support/tickets', { headers: { 'x-cc-id': user.id }, credentials: 'include' })
       ]);
       const [uData, tData] = await Promise.all([uRes.json(), tRes.json()]);
@@ -74,7 +74,7 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
   useEffect(() => {
     if (selectedTicket) {
       fetchMessages(selectedTicket.id);
-      const interval = setInterval(() => fetchMessages(selectedTicket.id), 8000);
+      const interval = setInterval(() => fetchMessages(selectedTicket.id), 15000); // Increased from 8s to 15s
       return () => clearInterval(interval);
     }
   }, [selectedTicket]);
@@ -129,15 +129,29 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
   };
 
   const handleResetPassword = async (userId: string, userName: string) => {
-    if (!confirm(`Reset password for ${userName}?`)) return;
+    if (!confirm(`⚠️ SECURITY ALERT: You are about to reset the password for ${userName}.\n\nThis is a sensitive action that will be logged.\n\nAre you sure you want to proceed?`)) return;
+    
     try {
       const res = await apiFetch(`/api/customer-care/users/${userId}/reset-password`, {
-        method: 'POST', headers: { 'x-cc-id': user.id }, credentials: 'include'
+        method: 'POST', 
+        headers: { 
+          'x-cc-id': user.id,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          reason: 'Password reset by customer care',
+          performedBy: user.id,
+          performedByName: user.name
+        })
       });
       const data = await res.json();
       if (data.success) toast.success(data.message);
-      else toast.error(data.error || 'Failed');
-    } catch { toast.error('Failed to reset password'); }
+      else toast.error(data.error || 'Failed to reset password');
+    } catch (error) {
+      console.error('Password reset error:', error);
+      toast.error('Failed to reset password. Please try again.');
+    }
   };
 
   const handleFreezeUser = async (userId: string, currentStatus: string, userName: string) => {
@@ -632,6 +646,9 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
 
         </AnimatePresence>
       </div>
+    </div>
+  );
+}
     </div>
   );
 }

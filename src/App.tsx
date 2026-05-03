@@ -498,24 +498,24 @@ function AppContent() {
     <div className="h-screen bg-slate-50 dark:bg-[#020817] flex flex-col font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-hidden">
       {/* Header */}
       <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
-        <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 max-w-7xl mx-auto w-full">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-14 sm:h-16 max-w-7xl mx-auto w-full">
+          <div className="flex items-center gap-3 sm:gap-4">
             {!isMainTab ? (
               <button 
                 onClick={navigateBack}
-                className="p-2 -ml-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center gap-1"
+                className="p-2.5 -ml-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center gap-1 active:scale-95 transition-all touch-manipulation"
                 aria-label="Back"
               >
-                <ChevronLeft className="w-6 h-6" />
+                <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
                 <span className="font-bold hidden sm:block">Back</span>
               </button>
             ) : (
               <button 
                 onClick={() => navigateTo(homeView as View)}
-                className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold text-xl tracking-tight hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold text-lg sm:text-xl tracking-tight hover:opacity-80 transition-opacity active:scale-95 touch-manipulation"
                 aria-label="Go to home"
               >
-                <Logo className="w-8 h-8" />
+                <Logo className="w-7 h-7 sm:w-8 sm:h-8" />
                 <span className="hidden sm:block">Kosi Bills</span>
               </button>
             )}
@@ -538,20 +538,20 @@ function AppContent() {
           <div className="flex items-center gap-2 sm:gap-4">
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2 text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="p-2.5 text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 touch-manipulation"
               aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+              {isDarkMode ? <Sun className="w-5 h-5 sm:w-6 sm:h-6" /> : <Moon className="w-5 h-5 sm:w-6 sm:h-6" />}
             </button>
             <div className="relative">
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="relative p-2.5 text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 touch-manipulation"
                 aria-label="Notifications"
               >
-                <Bell className="w-6 h-6" />
+                <Bell className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
                 {unreadCount > 0 && (
-                  <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
                 )}
               </button>
 
@@ -675,9 +675,9 @@ function AppContent() {
       </main>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="fixed bottom-0 left-0 right-0 z-40 safe-bottom">
         <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800">
-          <div className="flex justify-around items-center h-16 max-w-md mx-auto px-2">
+          <div className="flex justify-around items-center h-16 sm:h-14 max-w-md mx-auto px-2">
             {bottomNav.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.view;
@@ -685,17 +685,17 @@ function AppContent() {
                 <button
                   key={item.name}
                   onClick={() => navigateTo(item.view)}
-                  className="flex flex-col items-center justify-center flex-1 h-full gap-1 relative transition-all active:scale-90"
+                  className="flex flex-col items-center justify-center flex-1 h-full gap-1 relative transition-all active:scale-90 touch-manipulation"
                 >
                   {isActive && (
                     <motion.div layoutId="nav-indicator"
                       className="absolute top-2 w-8 h-1 bg-emerald-500 rounded-full"
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
                   )}
-                  <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-emerald-50 dark:bg-emerald-950/50' : ''}`}>
-                    <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                  <div className={`p-2 sm:p-1.5 rounded-xl transition-all ${isActive ? 'bg-emerald-50 dark:bg-emerald-950/50' : ''}`}>
+                    <Icon className={`w-6 h-6 sm:w-5 sm:h-5 transition-colors ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`} strokeWidth={2.5} />
                   </div>
-                  <span className={`text-[10px] font-bold transition-colors ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>{item.name}</span>
+                  <span className={`text-[11px] sm:text-[10px] font-bold transition-colors ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>{item.name}</span>
                 </button>
               );
             })}

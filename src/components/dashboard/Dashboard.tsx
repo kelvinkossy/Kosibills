@@ -405,12 +405,12 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
                 {PRESET_AMOUNTS.map(amount => (
                   <button
                     key={amount}
                     onClick={() => setFundAmount(String(amount))}
-                    className={`py-3 rounded-xl font-bold text-sm transition-all ${
+                    className={`py-3 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all touch-manipulation ${
                       fundAmount === String(amount) 
                         ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' 
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -422,12 +422,12 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
               </div>
 
               <div className="relative mb-4">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-lg">₦</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-lg sm:text-xl">₦</span>
                 <input
                   type="number"
                   value={fundAmount}
                   onChange={(e) => setFundAmount(e.target.value)}
-                  className="w-full pl-10 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xl font-black text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  className="w-full pl-10 sm:pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xl sm:text-xl font-black text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                   placeholder="Enter amount"
                   min="100"
                 />
@@ -441,7 +441,7 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
               <button
                 onClick={handleFundWallet}
                 disabled={!fundAmount || Number(fundAmount) < 100}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 touch-manipulation"
               >
                 Fund ₦{Number(fundAmount || 0).toLocaleString()}
               </button>

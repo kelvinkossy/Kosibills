@@ -4,6 +4,7 @@ import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
@@ -73,6 +74,10 @@ if (vapidKeys.publicKey && vapidKeys.privateKey) {
 console.log('Initializing database...');
 const db = new Database('kosi_bills.db');
 db.pragma('journal_mode = WAL'); // Use WAL mode for better concurrency and corruption resistance
+db.pragma('synchronous = NORMAL'); // Faster writes with acceptable safety
+db.pragma('cache_size = -64000'); // 64MB cache
+db.pragma('temp_store = MEMORY'); // Store temp tables in memory
+db.pragma('mmap_size = 30000000000'); // Enable memory mapping for large files
 
 // Initialize Database
 console.log('Creating tables...');
@@ -125,6 +130,12 @@ db.exec(`
   } catch(e) { /* ignore duplicate column error */ }
   try {
     db.exec('ALTER TABLE users ADD COLUMN two_factor_enabled INTEGER DEFAULT 0;');
+  } catch(e) { /* ignore duplicate column error */ }
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0;');
+  } catch(e) { /* ignore duplicate column error */ }
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN locked_until TEXT;');
   } catch(e) { /* ignore duplicate column error */ }
   try {
     db.exec('ALTER TABLE users ADD COLUMN is_email_verified INTEGER DEFAULT 0;');
@@ -639,6 +650,9 @@ async function startServer() {
     crossOriginResourcePolicy: false,
     frameguard: false,
   }));
+
+  // Compression middleware for better performance
+  app.use(compression());
   
   // Rate limiting for sensitive routes
   const authLimiter = rateLimit({
@@ -1184,8 +1198,31 @@ async function startServer() {
       
       res.json({ success: true, user: sanitizeUser({ ...mappedUser }) });
     } else {
-      const ip = (req as any).ip || 'unknown';
-      const ua = (req as any).headers?.['user-agent'] || 'unknown';
+      // Increment failed login attempts
+      const maxAttempts = 5;
+      const lockoutMinutes = 30;
+      
+      if (user) {
+        const newAttempts = (user.failed_login_attempts || 0) + 1;
+        if (newAttempts >= maxAttempts) {
+          // Lock the account
+          const lockedUntil = new Date(Date.now() + lockoutMinutes * 60 * 1000).toISOString();
+          db.prepare('UPDATE users SET failed_login_attempts = ?, locked_until = ? WHERE id = ?').run(newAttempts, lockedUntil, user.id);
+          logger.warn('[SECURITY] Account locked due to failed login attempts', { email, ip, userId: user.id, attempts: newAttempts });
+          logSecurityEvent(user.id, 'ACCOUNT_LOCKED', ip, ua, `email: ${email}, attempts: ${newAttempts}`);
+          return res.status(403).json({ 
+            error: `Account locked due to too many failed login attempts. Please try again in ${lockoutMinutes} minutes.` 
+          });
+        } else {
+          db.prepare('UPDATE users SET failed_login_attempts = ? WHERE id = ?').run(newAttempts, user.id);
+          const remainingAttempts = maxAttempts - newAttempts;
+          logger.warn('[AUTH] Failed login attempt', { email, ip, userId: user.id, attempts: newAttempts, remaining: remainingAttempts });
+          return res.status(401).json({ 
+            error: `Invalid email or password. ${remainingAttempts} attempt${remainingAttempts > 1 ? 's' : ''} remaining.` 
+          });
+        }
+      }
+      
       logSecurityEvent(null, 'LOGIN_FAILED', ip, ua, `email: ${email}`);
       logger.warn('[AUTH] Failed login attempt', { email, ip });
       res.status(401).json({ error: 'Invalid email or password' });
@@ -3076,6 +3113,100 @@ Kosi Bills is a Nigerian fintech app that lets users pay all their bills from on
   }
 
   // CSRF Error Handler — must come before the global error handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err.code === 'EBADCSRFTOKEN') {
+      logger.warn('[CSRF] Invalid or missing CSRF token', { path: req.path, ip: req.ip });
+      return res.status(403).json({ error: 'Invalid or missing CSRF token. Please refresh and try again.' });
+    }
+    next(err);
+  });
+
+  // Global Error Handler Middleware
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled Error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
+    });
+  });
+
+  const PORT = parseInt(process.env.PORT || '5000');
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();
+
+startServer();
+
+startServer();
+      error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
+    });
+  });
+
+  const PORT = parseInt(process.env.PORT || '5000');
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();
+      error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
+    });
+  });
+
+  const PORT = parseInt(process.env.PORT || '5000');
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();
+    }
+  });
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    app.use(express.static('dist'));
+  }
+
+  // CSRF Error Handler — must come before the global error handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err.code === 'EBADCSRFTOKEN') {
+      logger.warn('[CSRF] Invalid or missing CSRF token', { path: req.path, ip: req.ip });
+      return res.status(403).json({ error: 'Invalid or missing CSRF token. Please refresh and try again.' });
+    }
+    next(err);
+  });
+
+  // Global Error Handler Middleware
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled Error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
+    });
+  });
+
+  const PORT = parseInt(process.env.PORT || '5000');
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (err.code === 'EBADCSRFTOKEN') {
       logger.warn('[CSRF] Invalid or missing CSRF token', { path: req.path, ip: req.ip });

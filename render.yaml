@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: kosi-bills
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+    autoDeploy: true

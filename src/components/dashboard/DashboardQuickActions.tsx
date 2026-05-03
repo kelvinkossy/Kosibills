@@ -39,12 +39,12 @@ const QuickActions = memo(function QuickActions({ setView }: QuickActionsProps) 
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04, type: 'spring', stiffness: 300, damping: 20 }}
               onClick={() => setView(service.view)}
-              className="flex flex-col items-center gap-2 group"
+              className="flex flex-col items-center gap-2 group touch-manipulation"
             >
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${service.color} shadow-lg ${service.shadow} flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-transform duration-200`}>
-                <Icon className="w-6 h-6 text-white" strokeWidth={2} />
+              <div className={`w-14 h-14 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${service.color} shadow-lg ${service.shadow} flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-transform duration-200`}>
+                <Icon className="w-7 h-7 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
               </div>
-              <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 text-center leading-tight">{service.name}</span>
+              <span className="text-[11px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 text-center leading-tight">{service.name}</span>
             </motion.button>
           );
         })}

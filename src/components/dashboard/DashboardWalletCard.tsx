@@ -52,7 +52,7 @@ export default function WalletCard({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         style={{ background: `linear-gradient(135deg, ${colors.from} 0%, ${colors.to} 100%)` }}
-        className="relative rounded-[2rem] p-6 overflow-hidden shadow-2xl shadow-slate-900/40"
+        className="relative rounded-[2rem] p-5 sm:p-6 overflow-hidden shadow-2xl shadow-slate-900/40"
       >
         {/* Decorative circles */}
         <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/5 pointer-events-none" />
@@ -85,15 +85,15 @@ export default function WalletCard({
           </div>
 
           {/* Balance */}
-          <div className="mb-6">
-            <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-1">Available Balance</p>
+          <div className="mb-5 sm:mb-6">
+            <p className="text-white/50 text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1">Available Balance</p>
             <motion.div
               key={hideBalance ? 'hidden' : formattedBalance}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex items-baseline gap-2">
-              <span className="text-white/60 text-2xl font-black">₦</span>
-              <span className="text-white text-4xl sm:text-5xl font-black tracking-tight">
+              <span className="text-white/60 text-xl sm:text-2xl font-black">₦</span>
+              <span className="text-white text-3xl sm:text-4xl font-black tracking-tight">
                 {hideBalance ? '••••••' : formattedBalance}
               </span>
             </motion.div>
@@ -101,13 +101,13 @@ export default function WalletCard({
 
           {/* Account info */}
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-white/40 text-[10px] uppercase tracking-wider">Account holder</p>
-              <p className="text-white font-bold text-sm mt-0.5 truncate max-w-[180px]">{user.name}</p>
+              <p className="text-white font-bold text-xs sm:text-sm mt-0.5 truncate">{user.name}</p>
             </div>
             <button onClick={copyAccountNumber}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl transition-all active:scale-95">
-              <span className="text-white font-bold text-xs tracking-widest">0123 456 789</span>
+              className="flex items-center gap-1.5 sm:gap-2 bg-white/10 hover:bg-white/20 px-2.5 sm:px-3 py-2 rounded-xl transition-all active:scale-95 touch-manipulation">
+              <span className="text-white font-bold text-[10px] sm:text-xs tracking-widest">0123 456 789</span>
               <Copy className="w-3 h-3 text-white/60" />
             </button>
           </div>
@@ -124,12 +124,12 @@ export default function WalletCard({
             transition={{ delay: i * 0.05 }}
             onClick={action}
             disabled={label === 'Add Money' && isFunding}
-            className="flex flex-col items-center gap-2 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl hover:shadow-md transition-all active:scale-95 disabled:opacity-60"
+            className="flex flex-col items-center gap-2 py-3 sm:py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl hover:shadow-md transition-all active:scale-95 disabled:opacity-60 touch-manipulation"
           >
-            <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center shadow-lg`}>
-              <Icon className="w-5 h-5 text-white" />
+            <div className={`w-11 h-11 sm:w-10 sm:h-10 ${color} rounded-xl flex items-center justify-center shadow-lg`}>
+              <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
             </div>
-            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">{label}</span>
+            <span className="text-[10px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400">{label}</span>
           </motion.button>
         ))}
       </div>

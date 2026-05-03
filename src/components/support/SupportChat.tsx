@@ -131,43 +131,43 @@ export default function SupportChat({ user }: SupportChatProps) {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-3xl mx-auto h-[calc(100vh-120px)] flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
     >
-      <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between gap-4">
+      <div className="p-4 md:p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-            <MessageCircle className="w-6 h-6" />
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white">Kosi Support</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">We typically reply within minutes</p>
+            <h2 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white">Kosi Support</h2>
+            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">We typically reply within minutes</p>
           </div>
         </div>
         <button
           onClick={clearChat}
-          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+          className="text-xs md:text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
         >
           Clear chat
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`flex gap-4 ${msg.senderType === 'user' ? 'flex-row-reverse' : ''}`}
           >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+            <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
               msg.senderType === 'user'
                 ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
             }`}>
-              {msg.senderType === 'user' ? <UserIcon className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
+              {msg.senderType === 'user' ? <UserIcon className="w-4 h-4 md:w-5 md:h-5" /> : <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />}
             </div>
-            <div className={`max-w-[80%] rounded-2xl p-4 ${
+            <div className={`max-w-[80%] md:max-w-[80%] rounded-2xl p-3 md:p-4 ${
               msg.senderType === 'user'
                 ? 'bg-emerald-600 text-white rounded-tr-none'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none'
             }`}>
-              <p className="whitespace-pre-wrap">{msg.message}</p>
+              <p className="whitespace-pre-wrap text-sm md:text-base">{msg.message}</p>
               <span className={`text-xs mt-2 block ${msg.senderType === 'user' ? 'text-emerald-200' : 'text-slate-400'}`}>
                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
@@ -176,19 +176,19 @@ export default function SupportChat({ user }: SupportChatProps) {
         ))}
         {isLoading && (
           <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <MessageCircle className="w-5 h-5" />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
             </div>
-            <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-none p-4 flex items-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
-              <span className="text-slate-500">Support is responding...</span>
+            <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-none p-3 md:p-4 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin text-slate-400" />
+              <span className="text-slate-500 text-sm">Support is responding...</span>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div className="p-3 md:p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="flex gap-2">
           <input
             type="text"
@@ -202,7 +202,7 @@ export default function SupportChat({ user }: SupportChatProps) {
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white p-3 rounded-xl transition-colors flex items-center justify-center"
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white p-3 md:p-3 rounded-xl transition-colors flex items-center justify-center"
           >
             <Send className="w-5 h-5" />
           </button>

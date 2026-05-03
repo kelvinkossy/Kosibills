@@ -36,26 +36,26 @@ function formatDate(dateStr: string) {
 }
 
 const SkeletonRow = () => (
-  <div className="flex items-center justify-between p-4 animate-pulse">
+  <div className="flex items-center justify-between p-3 sm:p-4 animate-pulse">
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800" />
+      <div className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-slate-200 dark:bg-slate-800" />
       <div className="space-y-2">
-        <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-800 rounded-full" />
-        <div className="h-2.5 w-16 bg-slate-100 dark:bg-slate-800/60 rounded-full" />
+        <div className="h-3.5 w-24 sm:w-28 bg-slate-200 dark:bg-slate-800 rounded-full" />
+        <div className="h-2.5 w-14 sm:w-16 bg-slate-100 dark:bg-slate-800/60 rounded-full" />
       </div>
     </div>
-    <div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded-full" />
+    <div className="h-4 w-14 sm:w-16 bg-slate-200 dark:bg-slate-800 rounded-full" />
   </div>
 );
 
 const RecentTransactions = memo(function RecentTransactions({ transactions, isLoading, setView }: RecentTransactionsProps) {
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[1.5rem] overflow-hidden shadow-sm">
-      <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-slate-800">
-        <h2 className="font-black text-slate-800 dark:text-white text-base">Recent Activity</h2>
+      <div className="flex items-center justify-between px-4 py-3 sm:py-3.5 border-b border-slate-100 dark:border-slate-800">
+        <h2 className="font-black text-slate-800 dark:text-white text-sm sm:text-base">Recent Activity</h2>
         <button onClick={() => setView('history')}
-          className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors">
-          See all <ChevronRight className="w-3.5 h-3.5" />
+          className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors touch-manipulation">
+          See all <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
         </button>
       </div>
 
@@ -74,10 +74,10 @@ const RecentTransactions = memo(function RecentTransactions({ transactions, isLo
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0">
+                className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${meta.bg}`}>
-                    <Icon className={`w-5 h-5 ${meta.color}`} />
+                  <div className={`w-11 h-11 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${meta.bg}`}>
+                    <Icon className={`w-5 h-5 ${meta.color}`} strokeWidth={2.5} />
                   </div>
                   <div>
                     <p className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate max-w-[180px]">{tx.description}</p>
