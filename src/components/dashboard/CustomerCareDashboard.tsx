@@ -649,6 +649,3 @@ export default function CustomerCareDashboard({ user }: CustomerCareDashboardPro
     </div>
   );
 }
-    </div>
-  );
-}
