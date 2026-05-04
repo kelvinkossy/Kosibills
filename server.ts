@@ -373,7 +373,7 @@ db.exec(`
   }
 
   // Set admin from environment variable (never hardcode admin emails)
-  const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'kelvinnnatu2@gmail.com';
   if (ADMIN_EMAIL) {
     try {
       db.prepare('UPDATE users SET is_admin = 1 WHERE email = ?').run(ADMIN_EMAIL);
@@ -886,9 +886,9 @@ async function startServer() {
         if (referrer) referrerId = referrer.id;
       }
 
-      const stmt = db.prepare('INSERT INTO users (name, email, phone, password, balance, tier, pin, referral_code, last_login_at, verification_token, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-      // Start with 0 balance
-      const info = stmt.run(name, email, phone, hashPassword(password), 0, 'Basic', hashPin('1234'), referralCode, new Date().toISOString(), verificationToken, referrerId);
+      const stmt = db.prepare('INSERT INTO users (name, email, phone, password, balance, tier, pin, referral_code, last_login_at, verification_token, referred_by, is_email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      // Start with 0 balance and unverified email
+      const info = stmt.run(name, email, phone, hashPassword(password), 0, 'Basic', hashPin('1234'), referralCode, new Date().toISOString(), verificationToken, referrerId, 0);
 
       // Credit referrer if found
       if (referrerId) {
@@ -1114,6 +1114,11 @@ async function startServer() {
     const user = stmt.get(email) as any;
     
     if (user && verifyPassword(password, user.password)) {
+      // Check if email is verified (skip for admin email)
+      if (!user.is_email_verified && email !== ADMIN_EMAIL) {
+        return res.status(403).json({ error: 'Please verify your email before logging in. Check your inbox for the verification link.' });
+      }
+      
       if (ADMIN_EMAIL && email === ADMIN_EMAIL && !user.is_admin) {
         db.prepare('UPDATE users SET is_admin = 1, last_login_at = ? WHERE id = ?').run(new Date().toISOString(), user.id);
         user.is_admin = 1;
