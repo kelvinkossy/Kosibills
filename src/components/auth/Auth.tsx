@@ -229,14 +229,15 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
 
               {!isForgotMode && (
                 <>
-                  <button onClick={handleGoogleSignIn} disabled={isLoading}
+                  {/* Google signup temporarily disabled until Firebase is configured */}
+                  {/* <button onClick={handleGoogleSignIn} disabled={isLoading}
                     className="w-full flex items-center justify-center gap-3 py-3.5 bg-white hover:bg-slate-50 rounded-2xl font-bold text-slate-800 transition-all active:scale-95 disabled:opacity-70 mb-5 shadow-lg">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                     Continue with Google
-                  </button>
+                  </button> */}
                   <div className="relative mb-5">
                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-                    <div className="relative flex justify-center"><span className="px-3 bg-transparent text-slate-500 text-sm font-medium">or with email</span></div>
+                    <div className="relative flex justify-center"><span className="px-3 bg-transparent text-slate-500 text-sm font-medium">Sign up with email</span></div>
                   </div>
                 </>
               )}
