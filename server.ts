@@ -556,7 +556,7 @@ function issueTokenPair(userId: number, email: string, sessionToken: string, ip:
 const registerSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
-  phone: z.string().min(10).max(15),
+  phone: z.string().min(10).max(15).optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
