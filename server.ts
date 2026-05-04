@@ -1046,7 +1046,7 @@ async function startServer() {
         const referralCode = `KOSI-${safeName.substring(0, 3).toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`;
         const stmt = db.prepare('INSERT INTO users (name, email, phone, password, balance, tier, pin, referral_code, profile_photo, last_login_at, is_email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         const randomPassword = crypto.randomBytes(16).toString('hex');
-        const info = stmt.run(safeName, email, '', hashPassword(randomPassword), 0, 'Basic', hashPin('1234'), referralCode, safeProfilePhoto, new Date().toISOString(), 1);
+        const info = stmt.run(safeName, email, null, hashPassword(randomPassword), 0, 'Basic', hashPin('1234'), referralCode, safeProfilePhoto, new Date().toISOString(), 1);
         
         const txStmt = db.prepare('INSERT INTO transactions (user_id, type, description, amount, date, status) VALUES (?, ?, ?, ?, ?, ?)');
         txStmt.run(info.lastInsertRowid, 'Wallet Fund', 'Account Created', 0, new Date().toISOString(), 'success');
