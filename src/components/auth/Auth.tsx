@@ -6,6 +6,8 @@ import { Mail, Lock, User, ArrowRight, Loader2, Smartphone, Eye, EyeOff, ShieldC
 import Logo from '../common/Logo';
 import { auth } from '../../firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { haptics } from '../../utils/haptics';
+import PageTransition from '../ui/PageTransition';
 
 interface AuthProps {
   onLogin: (user: any) => void;
@@ -137,7 +139,8 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 flex flex-col lg:flex-row">
+    <PageTransition>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 flex flex-col lg:flex-row">
       {/* Left brand panel - hidden on mobile, shown on large screens */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/20 to-teal-600/10"></div>
@@ -341,5 +344,6 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 }
