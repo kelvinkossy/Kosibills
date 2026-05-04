@@ -86,7 +86,7 @@ db.exec(`
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
       email TEXT UNIQUE,
-      phone TEXT,
+      phone TEXT UNIQUE,
       password TEXT,
       balance REAL DEFAULT 0,
       tier TEXT DEFAULT 'Basic',
