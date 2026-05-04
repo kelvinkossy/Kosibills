@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Eye, EyeOff, RefreshCw, Copy, ArrowUpRight, ArrowDownLeft, Send, Plus } from 'lucide-react';
 import { User } from '../../types';
 import { toast } from 'react-hot-toast';
+import Skeleton from '../ui/Skeleton';
 
 interface WalletCardProps {
   user: User;
@@ -87,16 +88,25 @@ export default function WalletCard({
           {/* Balance */}
           <div className="mb-5 sm:mb-6">
             <p className="text-white/50 text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-1">Available Balance</p>
-            <motion.div
-              key={hideBalance ? 'hidden' : formattedBalance}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-baseline gap-2">
-              <span className="text-white/60 text-xl sm:text-2xl font-black">₦</span>
-              <span className="text-white text-3xl sm:text-4xl font-black tracking-tight">
-                {hideBalance ? '••••••' : formattedBalance}
-              </span>
-            </motion.div>
+            {isLoading ? (
+              <Skeleton 
+                variant="text" 
+                width="200px" 
+                height="48px" 
+                className="bg-white/20" 
+              />
+            ) : (
+              <motion.div
+                key={hideBalance ? 'hidden' : formattedBalance}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-baseline gap-2">
+                <span className="text-white/60 text-xl sm:text-2xl font-black">₦</span>
+                <span className="text-white text-3xl sm:text-4xl font-black tracking-tight">
+                  {hideBalance ? '••••••' : formattedBalance}
+                </span>
+              </motion.div>
+            )}
           </div>
 
           {/* Account info */}
