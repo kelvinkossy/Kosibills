@@ -888,7 +888,8 @@ async function startServer() {
 
       const stmt = db.prepare('INSERT INTO users (name, email, phone, password, balance, tier, pin, referral_code, last_login_at, verification_token, referred_by, is_email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       // Start with 0 balance and unverified email
-      const info = stmt.run(name, email, phone, hashPassword(password), 0, 'Basic', hashPin('1234'), referralCode, new Date().toISOString(), verificationToken, referrerId, 0);
+      const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+      const info = stmt.run(name, email, phone, hashPassword(password), 0, 'Basic', hashPin('1234'), referralCode, new Date().toISOString(), verificationToken, referrerId, smtpConfigured ? 0 : 1);
 
       // Credit referrer if found
       if (referrerId) {
@@ -896,23 +897,29 @@ async function startServer() {
         createNotification(referrerId, 'New Referral!', `${name} just signed up using your referral code. Keep sharing!`, 'success');
       }
       
-      // Send Verification Email
-      const verificationUrl = `${process.env.APP_URL}/api/auth/verify-email?token=${verificationToken}`;
-      sendEmail(
-        email,
-        'Verify Your Email - Kosi Bills',
-        `
-        <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
-          <h2>Welcome to Kosi Bills!</h2>
-          <p>Hello ${name},</p>
-          <p>Thank you for signing up. Please verify your email address by clicking the button below:</p>
-          <a href="${verificationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Verify Email</a>
-          <p>If the button doesn't work, copy and paste this link into your browser:</p>
-          <p>${verificationUrl}</p>
-          <p>Best regards,<br>Kosi Bills Team</p>
-        </div>
-        `
-      );
+      // Send Verification Email (only if SMTP is configured)
+      if (smtpConfigured) {
+        const verificationUrl = `${process.env.APP_URL}/api/auth/verify-email?token=${verificationToken}`;
+        try {
+          sendEmail(
+            email,
+            'Verify Your Email - Kosi Bills',
+            `
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
+              <h2>Welcome to Kosi Bills!</h2>
+              <p>Hello ${name},</p>
+              <p>Thank you for signing up. Please verify your email address by clicking the button below:</p>
+              <a href="${verificationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Verify Email</a>
+              <p>If the button doesn't work, copy and paste this link into your browser:</p>
+              <p>${verificationUrl}</p>
+              <p>Best regards,<br>Kosi Bills Team</p>
+            </div>
+            `
+          );
+        } catch (error) {
+          logger.error('[AUTH] Failed to send verification email', { error });
+        }
+      }
 
       // Add initial transaction
       const txStmt = db.prepare('INSERT INTO transactions (user_id, type, description, amount, date, status) VALUES (?, ?, ?, ?, ?, ?)');
