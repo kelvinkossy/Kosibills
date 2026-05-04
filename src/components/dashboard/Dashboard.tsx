@@ -34,6 +34,9 @@ import DashboardInsightsWidget from './DashboardInsightsWidget';
 import DashboardRecentTransactions from './DashboardRecentTransactions';
 import { getCurrentSeason, getSeasonStyles } from '../../utils/seasons';
 import { storage } from '../../utils/storage';
+import { haptics } from '../../utils/haptics';
+import PageTransition from '../ui/PageTransition';
+import PullToRefresh from '../ui/PullToRefresh';
 
 interface DashboardProps {
   setView: (view: View) => void;
@@ -302,7 +305,9 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
   const seasonStyles = getSeasonStyles(season);
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
+    <PageTransition>
+      <PullToRefresh onRefresh={handleRefresh}>
+        <div className="space-y-4 max-w-2xl mx-auto">
       {/* Greeting bar */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-between">
@@ -312,7 +317,9 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
         </div>
         <button
           onClick={() => {
+            haptics.light();
             navigator.clipboard.writeText(user.referralCode || 'KOSI-REF');
+            haptics.success();
             toast.success('Referral code copied!');
           }}
           className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 px-3 py-2 rounded-xl text-emerald-700 dark:text-emerald-400 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors active:scale-95"
@@ -602,6 +609,8 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </PullToRefresh>
+    </PageTransition>
   );
 }
