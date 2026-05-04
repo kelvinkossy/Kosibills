@@ -373,7 +373,7 @@ db.exec(`
   }
 
   // Set admin from environment variable (never hardcode admin emails)
-  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'kelvinnnatu2@gmail.com';
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'kelvin@gmail.com';
   if (ADMIN_EMAIL) {
     try {
       db.prepare('UPDATE users SET is_admin = 1 WHERE email = ?').run(ADMIN_EMAIL);
