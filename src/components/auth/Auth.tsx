@@ -51,18 +51,38 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
     setIsLoading(true);
     try {
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      
+      console.log('Google user:', { displayName: user.displayName, email: user.email, photoURL: user.photoURL });
+      
       const response = await apiFetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: user.displayName, email: user.email, profilePhoto: user.photoURL, uid: user.uid })
       });
+      
       const data = await response.json();
-      if (response.ok) { onLogin(data.user); toast.success('Signed in with Google!'); }
-      else { toast.error(data.error || 'Google sign-in failed'); }
-    } catch { toast.error('Google sign-in failed'); }
-    finally { setIsLoading(false); }
+      console.log('Google auth response:', data);
+      
+      if (response.ok) { 
+        onLogin(data.user); 
+        toast.success('Signed in with Google!'); 
+      } else { 
+        toast.error(data.error || 'Google sign-in failed'); 
+      }
+    } catch (error: any) {
+      console.error('Google sign-in error:', error);
+      const errorMessage = error.code === 'auth/popup-closed-by-user' 
+        ? 'Sign-in was cancelled' 
+        : error.code === 'auth/unauthorized-domain'
+        ? 'This domain is not authorized for Google Auth. Please add it to Firebase console.'
+        : error.message || 'Google sign-in failed';
+      toast.error(errorMessage);
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   const setError = (msg: string) => { setErrorMsg(msg); toast.error(msg); };
