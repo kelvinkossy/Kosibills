@@ -117,7 +117,15 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
       const d = await r.json();
       if (r.ok) {
         clearError();
-        if (isForgotMode) { toast.success(d.message || 'Reset link sent!'); setIsForgotMode(false); setIsLogin(true); }
+        if (isForgotMode) { 
+          toast.success(d.message || 'Reset link sent!');
+          if (d.resetUrl || d.resetToken) {
+            // SMTP not configured, show the reset link/token
+            const resetUrl = d.resetUrl || `${window.location.origin}/reset-password?token=${d.resetToken}`;
+            alert(`SMTP not configured. Use this reset link:\n\n${resetUrl}`);
+          }
+          setIsForgotMode(false); setIsLogin(true); 
+        }
         else if (d.requires2FA) { setIs2FAMode(true); setTwoFactorEmail(d.email); toast.success(d.message); }
         else { onLogin(d.user); toast.success(isLogin ? 'Welcome back!' : 'Account created!'); }
       } else { setError(d.error || 'Something went wrong. Please try again.'); }

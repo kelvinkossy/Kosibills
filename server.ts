@@ -1303,24 +1303,31 @@ async function startServer() {
 
       db.prepare('UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?').run(resetToken, expiry, user.id);
 
-      const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
-      sendEmail(
-        email,
-        'Reset Your Password - Kosi Bills',
-        `
-        <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
-          <h2>Password Reset Request</h2>
-          <p>Hello ${user.name || 'User'},</p>
-          <p>You requested to reset your password. Click the button below to set a new password:</p>
-          <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
-          <p>This link will expire in 1 hour.</p>
-          <p>If you didn't request this, you can safely ignore this email.</p>
-          <p>Best regards,<br>Kosi Bills Team</p>
-        </div>
-        `
-      );
-
-      res.json({ success: true, message: 'Reset link sent to your email' });
+      const resetUrl = `${process.env.APP_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
+      
+      const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+      if (smtpConfigured) {
+        sendEmail(
+          email,
+          'Reset Your Password - Kosi Bills',
+          `
+          <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
+            <h2>Password Reset Request</h2>
+            <p>Hello ${user.name || 'User'},</p>
+            <p>You requested to reset your password. Click the button below to set a new password:</p>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you didn't request this, you can safely ignore this email.</p>
+            <p>Best regards,<br>Kosi Bills Team</p>
+          </div>
+          `
+        );
+        res.json({ success: true, message: 'Reset link sent to your email' });
+      } else {
+        // Return the reset URL in response for development without SMTP
+        logger.warn('[AUTH] SMTP not configured, returning reset token in response', { email });
+        res.json({ success: true, message: 'Reset link generated (SMTP not configured)', resetUrl, resetToken });
+      }
     } catch (error) {
       res.status(500).json({ error: 'Failed to process request' });
     }
@@ -1338,11 +1345,16 @@ async function startServer() {
       
       createNotification(user.id, 'Password Changed', 'Your account password has been successfully reset.', 'warning');
       
-      sendEmail(
-        user.email,
-        'Password Reset Successful',
-        `Hello ${user.name || 'User'},\n\nYour Kosi Bills account password has been successfully reset. If you did not perform this action, please contact support immediately.\n\nBest regards,\nKosi Bills Team`
-      );
+      const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+      if (smtpConfigured) {
+        sendEmail(
+          user.email,
+          'Password Reset Successful',
+          `Hello ${user.name || 'User'},\n\nYour Kosi Bills account password has been successfully reset. If you did not perform this action, please contact support immediately.\n\nBest regards,\nKosi Bills Team`
+        );
+      } else {
+        logger.warn('[AUTH] SMTP not configured, skipping password reset email', { email: user.email });
+      }
 
       res.json({ success: true, message: 'Password updated successfully' });
     } catch (error) {
