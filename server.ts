@@ -1198,15 +1198,19 @@ async function startServer() {
       logSecurityEvent(mappedUser.id, 'LOGIN_SUCCESS', ip, ua, `email: ${mappedUser.email}`);
       logger.info('[AUTH] Successful login', { userId: mappedUser.id, email: mappedUser.email, ip });
 
-      // Send Login Notification Email
+      // Send Login Notification Email (non-blocking)
       sendEmail(
         mappedUser.email,
         'New Login Detected',
         `Hello ${mappedUser.name || 'User'},\n\nA new login was detected on your Kosi Bills account at ${new Date().toLocaleString()}.\n\nIf this was not you, please secure your account immediately.\n\nBest regards,\nKosi Bills Team`
-      );
+      ).catch(err => logger.warn('[AUTH] Failed to send login notification email', { error: err?.message }));
       
-      // Create login notification
-      createNotification(mappedUser.id, 'New Login', 'A new sign-in was detected on your account.', 'info');
+      // Create login notification (non-blocking)
+      try {
+        createNotification(mappedUser.id, 'New Login', 'A new sign-in was detected on your account.', 'info');
+      } catch (err) {
+        logger.warn('[AUTH] Failed to create login notification', { error: err });
+      }
       
       res.json({ success: true, user: sanitizeUser({ ...mappedUser }) });
     } else {
