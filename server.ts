@@ -2359,6 +2359,38 @@ async function startServer() {
     }
   });
 
+  app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+    const { id } = req.params;
+    const adminId = Number((req as any).user.id);
+    
+    // Prevent admin from deleting themselves
+    if (parseInt(id) === adminId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    
+    try {
+      const userInfo = db.prepare('SELECT email, name FROM users WHERE id = ?').get(id) as any;
+      if (!userInfo) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Delete user's transactions first
+      db.prepare('DELETE FROM transactions WHERE user_id = ?').run(id);
+      // Delete user's notifications
+      db.prepare('DELETE FROM notifications WHERE user_id = ?').run(id);
+      // Delete user's sub-wallets
+      db.prepare('DELETE FROM sub_wallet_members WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM sub_wallets WHERE owner_id = ?').run(id);
+      // Delete user
+      db.prepare('DELETE FROM users WHERE id = ?').run(id);
+      
+      logAdminAction(adminId, 'user_delete', parseInt(id), `Deleted user ${userInfo.email} (${userInfo.name})`);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete user' });
+    }
+  });
+
   app.post('/api/admin/users', requireAdmin, (req, res) => {
     const { name, email, phone, password, isAgent } = req.body;
     try {

@@ -403,6 +403,38 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
     updateUserRole(userId, currentStatus ? 'customer' : 'admin');
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    // Prevent self-deletion
+    if (userId === user.id) {
+      toast.error("You cannot delete your own account");
+      return;
+    }
+    
+    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone and will delete all their transactions, notifications, and data.')) {
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-id': user.id
+        },
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('User deleted successfully');
+        fetchUsers(userPage, searchQuery);
+        fetchLogs();
+      } else {
+        toast.error(data.error || 'Failed to delete user');
+      }
+    } catch (error) {
+      toast.error('Failed to delete user');
+    }
+  };
+
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -1505,6 +1537,13 @@ export default function AdminDashboard({ user, onBack }: AdminDashboardProps) {
                               title={u.isAdmin ? "Revoke Admin" : "Make Admin"}
                             >
                               <ShieldCheck className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u.id)}
+                              className="p-2.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-5 h-5" />
                             </button>
                           </>
                         )}
