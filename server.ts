@@ -1117,6 +1117,10 @@ async function startServer() {
     const result = loginSchema.safeParse(req.body);
     if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
     const { email, password } = result.data;
+    
+    const ip = (req as any).ip || 'unknown';
+    const ua = (req as any).headers?.['user-agent'] || 'unknown';
+    
     const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
     const user = stmt.get(email) as any;
     
@@ -1178,8 +1182,6 @@ async function startServer() {
       const sessionToken = crypto.randomBytes(32).toString('hex');
       db.prepare('UPDATE users SET session_token = ? WHERE id = ?').run(sessionToken, mappedUser.id);
 
-      const ip = (req as any).ip || 'unknown';
-      const ua = (req as any).headers?.['user-agent'] || 'unknown';
       const { accessToken, refreshToken } = issueTokenPair(mappedUser.id, mappedUser.email, sessionToken, ip, ua);
       
       res.cookie('token', accessToken, {
