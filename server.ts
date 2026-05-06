@@ -14,7 +14,7 @@ import nodemailer from 'nodemailer';
 import webpush from 'web-push';
 import winston from 'winston';
 import dotenv from 'dotenv';
-import * as jarapoint from './services/jarapoint';
+import * as jarapoint from './server/services/jarapoint';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -1751,7 +1751,7 @@ async function startServer() {
   });
 
   // Payment Endpoint
-  app.post('/api/payments/pay', authenticateToken, paymentLimiter, (req: any, res) => {
+  app.post('/api/payments/pay', authenticateToken, paymentLimiter, async (req: any, res) => {
     const { userId, pin, type, description, amount, metadata } = req.body;
     const idempotencyKey = req.headers['idempotency-key'] as string;
 
