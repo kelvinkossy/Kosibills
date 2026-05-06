@@ -92,12 +92,20 @@ export default function Auth({ onLogin, initialMode = 'login' }: AuthProps) {
     e.preventDefault();
     clearError();
     if (!isLogin && !isForgotMode) {
-      if (formData.name.trim().length < 2) { setError('Name must be at least 2 characters'); return; }
+      if (formData.name.trim().length < 2) { setError('Please enter your full name (at least 2 characters)'); return; }
+      if (formData.name.trim().length > 50) { setError('Name is too long (maximum 50 characters)'); return; }
       const cleanPhone = formData.phone.replace(/[\s+]/g, '');
-      if (cleanPhone.length < 10 || !/^\d+$/.test(cleanPhone)) { setError('Enter a valid phone number'); return; }
+      if (cleanPhone.length === 0) { setError('Phone number is required'); return; }
+      if (cleanPhone.length !== 11) { setError('Please enter a valid 11-digit Nigerian phone number'); return; }
+      if (!/^\d+$/.test(cleanPhone)) { setError('Phone number can only contain digits'); return; }
     }
     const cleanEmail = formData.email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) { setError('Enter a valid email address'); return; }
+    if (cleanEmail.length === 0) { setError('Email address is required'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) { setError('Please enter a valid email address (e.g., user@example.com)'); return; }
+    if (formData.password.length === 0) { setError('Password is required'); return; }
+    if (formData.password.length < 6) { setError('Password must be at least 6 characters long'); return; }
+    if (formData.password.length > 100) { setError('Password is too long (maximum 100 characters)'); return; }
+    if (!isLogin && strength < 40) { setError('Password is too weak. Please include uppercase, numbers, and special characters.'); return; }
     if (!isForgotMode && formData.password.length < 8) { setError('Password must be at least 8 characters'); return; }
 
     setIsLoading(true);
