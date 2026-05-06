@@ -13,6 +13,10 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import webpush from 'web-push';
 import winston from 'winston';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 // ─── Structured Logger ─────────────────────────────────────────────────────
 const logger = winston.createLogger({
