@@ -14,6 +14,7 @@ import nodemailer from 'nodemailer';
 import webpush from 'web-push';
 import winston from 'winston';
 import dotenv from 'dotenv';
+import * as jarapoint from './services/jarapoint';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -1804,6 +1805,56 @@ async function startServer() {
       });
 
       transaction();
+
+      // Process VTU transactions through JaraPoint API
+      if (metadata && (type === 'Airtime' || type === 'Data' || type === 'Electricity' || type === 'Cable TV')) {
+        let vtuResult;
+        try {
+          if (type === 'Airtime') {
+            vtuResult = await jarapoint.buyAirtime(
+              metadata.phone,
+              finalAmount,
+              metadata.network
+            );
+          } else if (type === 'Data') {
+            vtuResult = await jarapoint.buyData(
+              metadata.phone,
+              metadata.plan,
+              metadata.network
+            );
+          } else if (type === 'Electricity') {
+            vtuResult = await jarapoint.buyElectricity(
+              metadata.meterNumber,
+              finalAmount,
+              metadata.provider
+            );
+          } else if (type === 'Cable TV') {
+            vtuResult = await jarapoint.buyCableTV(
+              metadata.iucNumber,
+              metadata.plan,
+              metadata.provider
+            );
+          }
+
+          if (!vtuResult.status) {
+            // VTU failed, refund the user
+            const refundTx = db.prepare('INSERT INTO transactions (user_id, type, description, amount, date, status, balance_after, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            const refundStmt = db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?');
+            const refundTransaction = db.transaction(() => {
+              refundStmt.run(finalAmount, userId);
+              const refundUser = userStmt.get(userId) as any;
+              refundTx.run(userId, 'Refund', `VTU failed: ${vtuResult.message}`, finalAmount, new Date().toISOString(), 'success', refundUser.balance, JSON.stringify({ originalTxId: txId }));
+            });
+            refundTransaction();
+            return res.status(400).json({ success: false, error: `VTU failed: ${vtuResult.message}` });
+          }
+
+          logger.info('[VTU] Transaction processed through JaraPoint', { type, txId, reference: vtuResult.reference });
+        } catch (vtuError: any) {
+          logger.error('[VTU] JaraPoint API error', { type, error: vtuError.message });
+          // Don't fail the transaction, log it for manual review
+        }
+      }
 
       const updatedUser = db.prepare('SELECT id, name, email, phone, balance, tier, is_live_mode as isLiveMode, is_biometric_enabled as isBiometricEnabled, profile_photo as profilePhoto, account_status as accountStatus, kyc_level as kycLevel, currency, is_agent as isAgent, is_admin as isAdmin, is_customer_care as isCustomerCare, referral_code as referralCode, hide_balance as hideBalance, daily_transfer_limit as dailyTransferLimit, daily_withdrawal_limit as dailyWithdrawalLimit, total_referred as totalReferred, bvn, last_login_at as lastLoginAt, two_factor_enabled as twoFactorEnabled, email_receipts_enabled as emailReceiptsEnabled FROM users WHERE id = ?').get(userId) as any;
       const pinRowPay = db.prepare('SELECT pin FROM users WHERE id = ?').get(userId) as any;
