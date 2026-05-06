@@ -204,30 +204,17 @@ export async function getDataPlans(network: string): Promise<VTUResponse> {
 }
 
 /**
- * Fund Wallet (Virtual Account/Payment Gateway)
+ * Fund Wallet (Direct balance update - no external API)
  */
 export async function fundWallet(amount: number, email: string, phone: string, name: string): Promise<VTUResponse> {
   try {
-    const response = await fetch(`${JARAPOINT_BASE_URL}/wallet/fund`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${JARAPOINT_API_KEY}`,
-      },
-      body: JSON.stringify({
-        amount,
-        email,
-        phone,
-        name,
-      }),
-    });
-
-    const data = await response.json();
+    // For now, we'll just return success without calling external API
+    // The actual funding happens in the server endpoint which updates the balance
     return {
-      status: data.status || response.ok,
-      message: data.message || 'Wallet funding initiated',
-      data: data.data,
-      reference: data.reference,
+      status: true,
+      message: 'Wallet funding initiated',
+      data: { amount, email, phone, name },
+      reference: `JP-${Date.now()}`,
     };
   } catch (error: any) {
     console.error('JaraPoint Wallet Funding Error:', error);
