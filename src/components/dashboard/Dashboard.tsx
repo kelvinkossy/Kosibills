@@ -121,61 +121,33 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
     }
     
     setShowFundModal(false);
+    setIsFunding(true);
 
-    const tx_ref = `KOSI-${Date.now()}`;
-    const publicKey = import.meta.env.VITE_FLW_PUBLIC_KEY;
-
-    if (!publicKey) {
-      toast.error("Payment gateway not configured. Please contact support.");
-      return;
+    try {
+      const response = await apiFetch('/api/wallet/fund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          amount: Number(amount)
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setUser(result.user);
+        storage.set('kosi_user', JSON.stringify(result.user));
+        toast.success("Wallet funded successfully!");
+        const txResponse = await apiFetch(`/api/transactions/${user.id}`);
+        const txData = await txResponse.json();
+        if (txData.success) setRecentTransactions((txData.transactions || []).slice(0, 5));
+      } else {
+        toast.error("Funding failed: " + result.error);
+      }
+    } catch (err) {
+      toast.error("Error funding wallet");
+    } finally {
+      setIsFunding(false);
     }
-
-    window.FlutterwaveCheckout({
-      public_key: publicKey,
-      tx_ref: tx_ref,
-      amount: Number(amount),
-      currency: "NGN",
-      payment_options: "card, banktransfer, ussd",
-      customer: {
-        email: user.email,
-        name: user.name,
-      },
-      customizations: {
-        title: "Kosi Bills",
-        description: "Wallet Funding",
-        logo: "https://picsum.photos/seed/kosi/200/200",
-      },
-      callback: async (data: any) => {
-        setIsFunding(true);
-        try {
-          const response = await apiFetch('/api/payments/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              transaction_id: data.transaction_id,
-              tx_ref: tx_ref,
-              userId: user.id
-            })
-          });
-          const result = await response.json();
-          if (result.success) {
-            setUser(result.user);
-            storage.set('kosi_user', JSON.stringify(result.user));
-            toast.success("Wallet funded successfully!");
-            const txResponse = await apiFetch(`/api/transactions/${user.id}`);
-            const txData = await txResponse.json();
-            if (txData.success) setRecentTransactions((txData.transactions || []).slice(0, 5));
-          } else {
-            toast.error("Payment verification failed: " + result.error);
-          }
-        } catch (err) {
-          toast.error("Error verifying payment");
-        } finally {
-          setIsFunding(false);
-        }
-      },
-      onclose: () => {}
-    });
   };
 
   const budgetLimit = 50000;

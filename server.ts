@@ -2158,42 +2158,94 @@ async function startServer() {
   });
 
   // Bill Services Endpoints
-  app.get('/api/bill-services/:service', (req, res) => {
+  app.get('/api/bill-services/:service', authenticateToken, async (req, res) => {
     const { service } = req.params;
     
-    // Mock data for now
-    const mockData: any = {
-      'Data': {
-        success: true,
-        services: [
-          {
-            provider_id: 'mtn',
-            provider_name: 'MTN',
-            packages: [
-              { id: 'mtn-1gb', name: '1GB Monthly', price: 1000, category: 'Monthly', validity: '30 days' },
-              { id: 'mtn-2gb', name: '2GB Monthly', price: 1800, category: 'Monthly', validity: '30 days' }
-            ]
-          },
-          {
-            provider_id: 'airtel',
-            provider_name: 'Airtel',
-            packages: [
-              { id: 'airtel-1gb', name: '1GB Monthly', price: 1000, category: 'Monthly', validity: '30 days' }
-            ]
+    try {
+      if (service === 'Data') {
+        // Fetch data plans from JaraPoint for all networks
+        const networks = ['mtn', 'airtel', 'glo', '9mobile'];
+        const services = [];
+        
+        for (const network of networks) {
+          const result = await jarapoint.getDataPlans(network);
+          if (result.status && result.data) {
+            services.push({
+              provider_id: network,
+              provider_name: network.charAt(0).toUpperCase() + network.slice(1),
+              packages: result.data
+            });
           }
-        ]
-      },
-      'Cable TV': {
-        success: true,
-        services: []
-      },
-      'Electricity': {
-        success: true,
-        services: []
+        }
+        
+        res.json({ success: true, services });
+      } else if (service === 'Cable TV') {
+        // Cable TV providers
+        res.json({
+          success: true,
+          services: [
+            {
+              provider_id: 'dstv',
+              provider_name: 'DSTV',
+              packages: [
+                { id: 'dstv-compact', name: 'Compact', price: 10500 },
+                { id: 'dstv-compact-plus', name: 'Compact Plus', price: 16500 },
+                { id: 'dstv-premium', name: 'Premium', price: 24500 }
+              ]
+            },
+            {
+              provider_id: 'gotv',
+              provider_name: 'GOtv',
+              packages: [
+                { id: 'gotv-jolli', name: 'Jolli', price: 1250 },
+                { id: 'gotv-jinja', name: 'Jinja', price: 1900 },
+                { id: 'gotv-max', name: 'Max', price: 3600 }
+              ]
+            },
+            {
+              provider_id: 'startimes',
+              provider_name: 'StarTimes',
+              packages: [
+                { id: 'startimes-basic', name: 'Basic', price: 1500 },
+                { id: 'startimes-smart', name: 'Smart', price: 2500 }
+              ]
+            }
+          ]
+        });
+      } else if (service === 'Electricity') {
+        // Electricity providers
+        res.json({
+          success: true,
+          services: [
+            {
+              provider_id: 'ikedc',
+              provider_name: 'Ikeja Electric',
+              packages: []
+            },
+            {
+              provider_id: 'ekedc',
+              provider_name: 'Eko Electric',
+              packages: []
+            },
+            {
+              provider_id: 'aedc',
+              provider_name: 'Abuja Electric',
+              packages: []
+            },
+            {
+              provider_id: 'phedc',
+              provider_name: 'Port Harcourt Electric',
+              packages: []
+            }
+          ]
+        });
+      } else {
+        res.json({ success: false, error: 'Service not found' });
       }
-    };
-
-    res.json(mockData[service] || { success: false, error: 'Service not found' });
+    } catch (error) {
+      console.error('Bill services error:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch services' });
+    }
   });
 
   app.put('/api/notifications/:userId/read', authenticateToken, (req: any, res) => {
