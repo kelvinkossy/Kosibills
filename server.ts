@@ -156,6 +156,9 @@ db.exec(`
   try {
     db.exec('ALTER TABLE users ADD COLUMN reset_token_expiry TEXT;');
   } catch(e) { /* ignore duplicate column error */ }
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN birthday TEXT;');
+  } catch(e) { /* ignore duplicate column error */ }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS transactions (
@@ -944,11 +947,22 @@ async function startServer() {
       logSecurityEvent(Number(info.lastInsertRowid), 'REGISTER', regIp, regUa, `email: ${email}`);
       
       // Send Welcome Email
-      sendEmail(
-        email,
-        'Welcome to Kosi Bills!',
-        `Hello ${name},\n\nWelcome to Kosi Bills! We're excited to have you on board. You can now fund your wallet, pay bills, and manage your finances with ease.\n\nYour referral code is: ${referralCode}\n\nBest regards,\nKosi Bills Team`
-      );
+      if (smtpConfigured) {
+        sendEmail(
+          email,
+          'Welcome to Kosi Bills!',
+          `
+          <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
+            <h2>Welcome to Kosi Bills! 🎉</h2>
+            <p>Hello ${name},</p>
+            <p>Welcome to Kosi Bills! We're excited to have you on board. You can now fund your wallet, pay bills, and manage your finances with ease.</p>
+            <p><strong>Your referral code is: ${referralCode}</strong></p>
+            <p>Share this code with friends and earn rewards when they sign up!</p>
+            <p>Best regards,<br>Kosi Bills Team</p>
+          </div>
+          `
+        ).catch(err => logger.error('[AUTH] Failed to send welcome email', { error: err }));
+      }
 
       res.cookie('token', regAccessToken, {
         httpOnly: true,
@@ -1292,7 +1306,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/auth/forgot-password', (req, res) => {
+  app.post('/api/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email required' });
 
@@ -1311,7 +1325,7 @@ async function startServer() {
       
       const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
       if (smtpConfigured) {
-        sendEmail(
+        const emailResult = await sendEmail(
           email,
           'Reset Your Password - Kosi Bills',
           `
@@ -1326,13 +1340,19 @@ async function startServer() {
           </div>
           `
         );
-        res.json({ success: true, message: 'Reset link sent to your email' });
+        if (emailResult.success) {
+          res.json({ success: true, message: 'Reset link sent to your email' });
+        } else {
+          logger.error('[AUTH] Failed to send reset email', { error: emailResult.error });
+          res.json({ success: true, message: 'Reset link generated (email sending failed)', resetUrl, resetToken });
+        }
       } else {
         // Return the reset URL in response for development without SMTP
         logger.warn('[AUTH] SMTP not configured, returning reset token in response', { email });
         res.json({ success: true, message: 'Reset link generated (SMTP not configured)', resetUrl, resetToken });
       }
     } catch (error) {
+      logger.error('[AUTH] Forgot password error', { error });
       res.status(500).json({ error: 'Failed to process request' });
     }
   });
@@ -3196,7 +3216,114 @@ Kosi Bills is a Nigerian fintech app that lets users pay all their bills from on
     });
   });
 
-  const PORT = parseInt(process.env.PORT || '5000');
+  // ─── Email Scheduler System ─────────────────────────────────────────────────────
+function startEmailScheduler() {
+  // Run every day at 9 AM
+  const checkDaily = () => {
+    const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+    if (!smtpConfigured) return;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+
+    // Check for birthdays
+    try {
+      const birthdayUsers = db.prepare('SELECT id, name, email FROM users WHERE birthday IS NOT NULL').all() as any[];
+      birthdayUsers.forEach(user => {
+        if (user.birthday) {
+          const userDate = new Date(user.birthday);
+          if (userDate.getMonth() + 1 === month && userDate.getDate() === day) {
+            sendEmail(
+              user.email,
+              'Happy Birthday from Kosi Bills! 🎂',
+              `
+              <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
+                <h2>Happy Birthday, ${user.name}! 🎉🎂</h2>
+                <p>Wishing you a fantastic birthday filled with joy and prosperity!</p>
+                <p>As a special gift, here's a 5% bonus on your next wallet funding.</p>
+                <p>Use code: <strong>BIRTHDAY${today.getFullYear()}</strong></p>
+                <p>Best regards,<br>Kosi Bills Team</p>
+              </div>
+              `
+            ).catch(err => logger.error('[EMAIL] Failed to send birthday email', { error: err, email: user.email }));
+          }
+        }
+      });
+    } catch (error) {
+      logger.error('[EMAIL] Failed to check birthdays', { error });
+    }
+
+    // Check for holidays (Christmas, Easter)
+    // Christmas: December 25
+    if (month === 12 && day === 25) {
+      try {
+        const allUsers = db.prepare('SELECT id, name, email FROM users WHERE account_status = ?').all('active') as any[];
+        allUsers.forEach(user => {
+          sendEmail(
+            user.email,
+            'Merry Christmas from Kosi Bills! 🎄🎁',
+            `
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
+              <h2>Merry Christmas, ${user.name}! 🎄🎁</h2>
+              <p>Wishing you and your family a wonderful Christmas filled with love and happiness.</p>
+              <p>Special offer: Get 10% bonus on all bill payments today!</p>
+              <p>Best regards,<br>Kosi Bills Team</p>
+            </div>
+            `
+          ).catch(err => logger.error('[EMAIL] Failed to send Christmas email', { error: err, email: user.email }));
+        });
+      } catch (error) {
+        logger.error('[EMAIL] Failed to send Christmas emails', { error });
+      }
+    }
+
+    // Easter (simplified - check for Easter Sunday dates)
+    // 2025: April 20, 2026: April 5, 2027: March 28
+    const easterDates = {
+      2025: { month: 4, day: 20 },
+      2026: { month: 4, day: 5 },
+      2027: { month: 3, day: 28 },
+    };
+    const currentEaster = easterDates[today.getFullYear() as keyof typeof easterDates];
+    if (currentEaster && currentEaster.month === month && currentEaster.day === day) {
+      try {
+        const allUsers = db.prepare('SELECT id, name, email FROM users WHERE account_status = ?').all('active') as any[];
+        allUsers.forEach(user => {
+          sendEmail(
+            user.email,
+            'Happy Easter from Kosi Bills! 🐰🥚',
+            `
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
+              <h2>Happy Easter, ${user.name}! 🐰🥚</h2>
+              <p>Wishing you a blessed and joyful Easter celebration!</p>
+              <p>Special offer: Free data bundle on any airtime purchase today!</p>
+              <p>Best regards,<br>Kosi Bills Team</p>
+            </div>
+            `
+          ).catch(err => logger.error('[EMAIL] Failed to send Easter email', { error: err, email: user.email }));
+        });
+      } catch (error) {
+        logger.error('[EMAIL] Failed to send Easter emails', { error });
+      }
+    }
+
+    logger.info('[EMAIL] Daily email check completed', { date: todayStr });
+  };
+
+  // Run immediately on startup
+  checkDaily();
+  
+  // Schedule to run every 24 hours
+  setInterval(checkDaily, 24 * 60 * 60 * 1000);
+  logger.info('[EMAIL] Email scheduler started');
+}
+
+// Start email scheduler
+startEmailScheduler();
+
+const PORT = parseInt(process.env.PORT || '5000');
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
