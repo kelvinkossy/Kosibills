@@ -202,3 +202,38 @@ export async function getDataPlans(network: string): Promise<VTUResponse> {
     };
   }
 }
+
+/**
+ * Fund Wallet (Virtual Account/Payment Gateway)
+ */
+export async function fundWallet(amount: number, email: string, phone: string, name: string): Promise<VTUResponse> {
+  try {
+    const response = await fetch(`${JARAPOINT_BASE_URL}/wallet/fund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${JARAPOINT_API_KEY}`,
+      },
+      body: JSON.stringify({
+        amount,
+        email,
+        phone,
+        name,
+      }),
+    });
+
+    const data = await response.json();
+    return {
+      status: data.status || response.ok,
+      message: data.message || 'Wallet funding initiated',
+      data: data.data,
+      reference: data.reference,
+    };
+  } catch (error: any) {
+    console.error('JaraPoint Wallet Funding Error:', error);
+    return {
+      status: false,
+      message: error.message || 'Failed to initiate wallet funding',
+    };
+  }
+}
