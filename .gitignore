@@ -1,12 +1,1 @@
 node_modules
-.env
-.env.local
-.env.*.local
-dist
-build
-*.log
-.DS_Store
-Thumbs.db
-kosi_bills.db
-kosi_bills.db-shm
-kosi_bills.db-wal

@@ -24,9 +24,7 @@ import {
   Verified,
   ShieldCheck,
   Wallet,
-  Users,
-  Camera,
-  Upload
+  Users
 } from 'lucide-react';
 import { User, AccountTier, View } from '../../types';
 import { storage } from '../../utils/storage';
@@ -54,7 +52,6 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
   const [sentOtp, setSentOtp] = useState('');
   const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
   const [newBeneficiary, setNewBeneficiary] = useState({ name: '', phone: '', serviceType: 'Airtime', provider: 'MTN' });
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   React.useEffect(() => {
     fetchBeneficiaries();
@@ -284,46 +281,6 @@ export default function Settings({ user, setUser, onLogout, setView }: SettingsP
     } catch (err) {
       setEmailReceiptsEnabled(!newValue);
       toast.error('Network error');
-    }
-  };
-
-  const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Photo must be less than 5MB');
-      return;
-    }
-    
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-
-    setIsUploadingPhoto(true);
-    try {
-      const formData = new FormData();
-      formData.append('photo', file);
-      formData.append('userId', user.id);
-
-      const response = await apiFetch('/api/user/upload-photo', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setUser(data.user);
-        storage.set('kosi_user', JSON.stringify(data.user));
-        toast.success('Profile photo updated successfully!');
-      } else {
-        toast.error(data.error || 'Failed to upload photo');
-      }
-    } catch (err) {
-      toast.error('Failed to upload photo');
-    } finally {
-      setIsUploadingPhoto(false);
     }
   };
 

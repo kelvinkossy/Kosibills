@@ -14,7 +14,6 @@ import nodemailer from 'nodemailer';
 import webpush from 'web-push';
 import winston from 'winston';
 import dotenv from 'dotenv';
-import * as jarapoint from './server/services/jarapoint';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -157,11 +156,6 @@ db.exec(`
   try {
     db.exec('ALTER TABLE users ADD COLUMN reset_token_expiry TEXT;');
   } catch(e) { /* ignore duplicate column error */ }
-  try {
-    db.exec('ALTER TABLE transactions ADD COLUMN category TEXT;');
-  } catch(e) { /* ignore duplicate column error */ }
-
-  // Create transaction categories table
   try {
     db.exec('ALTER TABLE users ADD COLUMN birthday TEXT;');
   } catch(e) { /* ignore duplicate column error */ }
@@ -1751,7 +1745,7 @@ async function startServer() {
   });
 
   // Payment Endpoint
-  app.post('/api/payments/pay', authenticateToken, paymentLimiter, async (req: any, res) => {
+  app.post('/api/payments/pay', authenticateToken, paymentLimiter, (req: any, res) => {
     const { userId, pin, type, description, amount, metadata } = req.body;
     const idempotencyKey = req.headers['idempotency-key'] as string;
 
@@ -1805,56 +1799,6 @@ async function startServer() {
       });
 
       transaction();
-
-      // Process VTU transactions through JaraPoint API
-      if (metadata && (type === 'Airtime' || type === 'Data' || type === 'Electricity' || type === 'Cable TV')) {
-        let vtuResult;
-        try {
-          if (type === 'Airtime') {
-            vtuResult = await jarapoint.buyAirtime(
-              metadata.phone,
-              finalAmount,
-              metadata.network
-            );
-          } else if (type === 'Data') {
-            vtuResult = await jarapoint.buyData(
-              metadata.phone,
-              metadata.plan,
-              metadata.network
-            );
-          } else if (type === 'Electricity') {
-            vtuResult = await jarapoint.buyElectricity(
-              metadata.meterNumber,
-              finalAmount,
-              metadata.provider
-            );
-          } else if (type === 'Cable TV') {
-            vtuResult = await jarapoint.buyCableTV(
-              metadata.iucNumber,
-              metadata.plan,
-              metadata.provider
-            );
-          }
-
-          if (!vtuResult.status) {
-            // VTU failed, refund the user
-            const refundTx = db.prepare('INSERT INTO transactions (user_id, type, description, amount, date, status, balance_after, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-            const refundStmt = db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?');
-            const refundTransaction = db.transaction(() => {
-              refundStmt.run(finalAmount, userId);
-              const refundUser = userStmt.get(userId) as any;
-              refundTx.run(userId, 'Refund', `VTU failed: ${vtuResult.message}`, finalAmount, new Date().toISOString(), 'success', refundUser.balance, JSON.stringify({ originalTxId: txId }));
-            });
-            refundTransaction();
-            return res.status(400).json({ success: false, error: `VTU failed: ${vtuResult.message}` });
-          }
-
-          logger.info('[VTU] Transaction processed through JaraPoint', { type, txId, reference: vtuResult.reference });
-        } catch (vtuError: any) {
-          logger.error('[VTU] JaraPoint API error', { type, error: vtuError.message });
-          // Don't fail the transaction, log it for manual review
-        }
-      }
 
       const updatedUser = db.prepare('SELECT id, name, email, phone, balance, tier, is_live_mode as isLiveMode, is_biometric_enabled as isBiometricEnabled, profile_photo as profilePhoto, account_status as accountStatus, kyc_level as kycLevel, currency, is_agent as isAgent, is_admin as isAdmin, is_customer_care as isCustomerCare, referral_code as referralCode, hide_balance as hideBalance, daily_transfer_limit as dailyTransferLimit, daily_withdrawal_limit as dailyWithdrawalLimit, total_referred as totalReferred, bvn, last_login_at as lastLoginAt, two_factor_enabled as twoFactorEnabled, email_receipts_enabled as emailReceiptsEnabled FROM users WHERE id = ?').get(userId) as any;
       const pinRowPay = db.prepare('SELECT pin FROM users WHERE id = ?').get(userId) as any;
@@ -1915,61 +1859,6 @@ async function startServer() {
       } else {
         res.status(500).json({ error: 'Payment failed' });
       }
-    }
-  });
-
-  // Wallet Funding Endpoint using JaraPoint
-  app.post('/api/wallet/fund', authenticateToken, async (req: any, res) => {
-    const { userId, amount } = req.body;
-    
-    if (Number(userId) !== Number(req.user.id)) return res.status(403).json({ error: 'Forbidden' });
-    
-    const parsedAmount = Number(amount);
-    if (!parsedAmount || parsedAmount < 100) {
-      return res.status(400).json({ error: 'Minimum funding amount is ₦100' });
-    }
-
-    try {
-      const user = db.prepare('SELECT id, name, email, phone FROM users WHERE id = ?').get(userId) as any;
-      if (!user) return res.status(404).json({ error: 'User not found' });
-
-      // Initiate funding through JaraPoint
-      const fundingResult = await jarapoint.fundWallet(
-        parsedAmount,
-        user.email,
-        user.phone || '',
-        user.name
-      );
-
-      if (fundingResult.status) {
-        // For now, assume funding is successful and add to balance
-        // In production, you would verify the payment callback
-        const updateBalance = db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?');
-        const insertTx = db.prepare('INSERT INTO transactions (user_id, type, description, amount, date, status, balance_after, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        
-        const transaction = db.transaction(() => {
-          updateBalance.run(parsedAmount, userId);
-          const newBalance = user.balance + parsedAmount;
-          insertTx.run(userId, 'Funding', 'Wallet funding via JaraPoint', parsedAmount, new Date().toISOString(), 'success', newBalance, JSON.stringify({ reference: fundingResult.reference }));
-        });
-        
-        transaction();
-
-        const updatedUser = db.prepare('SELECT id, name, email, phone, balance, tier FROM users WHERE id = ?').get(userId) as any;
-        
-        createNotification(userId, 'Wallet Funded', `Your wallet has been funded with ₦${parsedAmount.toLocaleString()}`, 'success');
-        
-        res.json({ 
-          success: true, 
-          user: sanitizeUser(updatedUser),
-          reference: fundingResult.reference 
-        });
-      } else {
-        res.status(400).json({ error: fundingResult.message || 'Funding failed' });
-      }
-    } catch (error: any) {
-      logger.error('[WALLET] Funding error', { userId, amount: parsedAmount, error: error.message });
-      res.status(500).json({ error: 'Funding failed' });
     }
   });
 
@@ -2158,94 +2047,42 @@ async function startServer() {
   });
 
   // Bill Services Endpoints
-  app.get('/api/bill-services/:service', authenticateToken, async (req, res) => {
+  app.get('/api/bill-services/:service', (req, res) => {
     const { service } = req.params;
     
-    try {
-      if (service === 'Data') {
-        // Fetch data plans from JaraPoint for all networks
-        const networks = ['mtn', 'airtel', 'glo', '9mobile'];
-        const services = [];
-        
-        for (const network of networks) {
-          const result = await jarapoint.getDataPlans(network);
-          if (result.status && result.data) {
-            services.push({
-              provider_id: network,
-              provider_name: network.charAt(0).toUpperCase() + network.slice(1),
-              packages: result.data
-            });
+    // Mock data for now
+    const mockData: any = {
+      'Data': {
+        success: true,
+        services: [
+          {
+            provider_id: 'mtn',
+            provider_name: 'MTN',
+            packages: [
+              { id: 'mtn-1gb', name: '1GB Monthly', price: 1000, category: 'Monthly', validity: '30 days' },
+              { id: 'mtn-2gb', name: '2GB Monthly', price: 1800, category: 'Monthly', validity: '30 days' }
+            ]
+          },
+          {
+            provider_id: 'airtel',
+            provider_name: 'Airtel',
+            packages: [
+              { id: 'airtel-1gb', name: '1GB Monthly', price: 1000, category: 'Monthly', validity: '30 days' }
+            ]
           }
-        }
-        
-        res.json({ success: true, services });
-      } else if (service === 'Cable TV') {
-        // Cable TV providers
-        res.json({
-          success: true,
-          services: [
-            {
-              provider_id: 'dstv',
-              provider_name: 'DSTV',
-              packages: [
-                { id: 'dstv-compact', name: 'Compact', price: 10500 },
-                { id: 'dstv-compact-plus', name: 'Compact Plus', price: 16500 },
-                { id: 'dstv-premium', name: 'Premium', price: 24500 }
-              ]
-            },
-            {
-              provider_id: 'gotv',
-              provider_name: 'GOtv',
-              packages: [
-                { id: 'gotv-jolli', name: 'Jolli', price: 1250 },
-                { id: 'gotv-jinja', name: 'Jinja', price: 1900 },
-                { id: 'gotv-max', name: 'Max', price: 3600 }
-              ]
-            },
-            {
-              provider_id: 'startimes',
-              provider_name: 'StarTimes',
-              packages: [
-                { id: 'startimes-basic', name: 'Basic', price: 1500 },
-                { id: 'startimes-smart', name: 'Smart', price: 2500 }
-              ]
-            }
-          ]
-        });
-      } else if (service === 'Electricity') {
-        // Electricity providers
-        res.json({
-          success: true,
-          services: [
-            {
-              provider_id: 'ikedc',
-              provider_name: 'Ikeja Electric',
-              packages: []
-            },
-            {
-              provider_id: 'ekedc',
-              provider_name: 'Eko Electric',
-              packages: []
-            },
-            {
-              provider_id: 'aedc',
-              provider_name: 'Abuja Electric',
-              packages: []
-            },
-            {
-              provider_id: 'phedc',
-              provider_name: 'Port Harcourt Electric',
-              packages: []
-            }
-          ]
-        });
-      } else {
-        res.json({ success: false, error: 'Service not found' });
+        ]
+      },
+      'Cable TV': {
+        success: true,
+        services: []
+      },
+      'Electricity': {
+        success: true,
+        services: []
       }
-    } catch (error) {
-      console.error('Bill services error:', error);
-      res.status(500).json({ success: false, error: 'Failed to fetch services' });
-    }
+    };
+
+    res.json(mockData[service] || { success: false, error: 'Service not found' });
   });
 
   app.put('/api/notifications/:userId/read', authenticateToken, (req: any, res) => {
@@ -3347,92 +3184,6 @@ Kosi Bills is a Nigerian fintech app that lets users pay all their bills from on
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to update ticket status' });
-    }
-  });
-
-  // Analytics API endpoints
-  app.get('/api/analytics/overview', requireAdmin, (req, res) => {
-    try {
-      const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get() as any;
-      const activeUsers = db.prepare("SELECT COUNT(*) as count FROM users WHERE account_status = 'active'").get() as any;
-      const totalRevenue = db.prepare('SELECT SUM(amount) as total FROM transactions WHERE type = ? AND status = ?').get('Wallet Fund', 'success') as any;
-      const todayRevenue = db.prepare('SELECT SUM(amount) as total FROM transactions WHERE type = ? AND status = ? AND date >= ?').get('Wallet Fund', 'success', new Date().toISOString().split('T')[0]) as any;
-      const totalTransactions = db.prepare('SELECT COUNT(*) as count FROM transactions').get() as any;
-      const todayTransactions = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE date >= ?').get(new Date().toISOString().split('T')[0]) as any;
-
-      res.json({
-        success: true,
-        data: {
-          totalUsers: totalUsers.count,
-          activeUsers: activeUsers.count,
-          totalRevenue: totalRevenue.total || 0,
-          todayRevenue: todayRevenue.total || 0,
-          totalTransactions: totalTransactions.count,
-          todayTransactions: todayTransactions.count
-        }
-      });
-    } catch (error) {
-      logger.error('[ANALYTICS] Failed to fetch overview', { error });
-      res.status(500).json({ error: 'Failed to fetch analytics data' });
-    }
-  });
-
-  app.get('/api/analytics/revenue-trend', requireAdmin, (req, res) => {
-    try {
-      const { days = 30 } = req.query;
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - Number(days));
-
-      const revenueData = db.prepare(`
-        SELECT DATE(date) as date, SUM(amount) as revenue
-        FROM transactions
-        WHERE type = ? AND status = ? AND date >= ?
-        GROUP BY DATE(date)
-        ORDER BY date ASC
-      `).all('Wallet Fund', 'success', startDate.toISOString()) as any[];
-
-      res.json({ success: true, data: revenueData });
-    } catch (error) {
-      logger.error('[ANALYTICS] Failed to fetch revenue trend', { error });
-      res.status(500).json({ error: 'Failed to fetch revenue trend' });
-    }
-  });
-
-  app.get('/api/analytics/user-growth', requireAdmin, (req, res) => {
-    try {
-      const { days = 30 } = req.query;
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - Number(days));
-
-      const userGrowth = db.prepare(`
-        SELECT DATE(created_at) as date, COUNT(*) as users
-        FROM users
-        WHERE created_at >= ?
-        GROUP BY DATE(created_at)
-        ORDER BY date ASC
-      `).all(startDate.toISOString()) as any[];
-
-      res.json({ success: true, data: userGrowth });
-    } catch (error) {
-      logger.error('[ANALYTICS] Failed to fetch user growth', { error });
-      res.status(500).json({ error: 'Failed to fetch user growth' });
-    }
-  });
-
-  app.get('/api/analytics/transaction-breakdown', requireAdmin, (req, res) => {
-    try {
-      const breakdown = db.prepare(`
-        SELECT type, category, COUNT(*) as count, SUM(amount) as total
-        FROM transactions
-        WHERE status = ?
-        GROUP BY type, category
-        ORDER BY total DESC
-      `).all('success') as any[];
-
-      res.json({ success: true, data: breakdown });
-    } catch (error) {
-      logger.error('[ANALYTICS] Failed to fetch transaction breakdown', { error });
-      res.status(500).json({ error: 'Failed to fetch transaction breakdown' });
     }
   });
 

@@ -1,37 +1,26 @@
 import React, { memo } from 'react';
 import { motion } from 'motion/react';
-import { TrendingUp, Lightbulb, BarChart2, ArrowRight } from 'lucide-react';
+import { TrendingUp, Lightbulb, BarChart2 } from 'lucide-react';
 
 interface DashboardInsightsWidgetProps {
   aiTip: string;
   topExpenseCategory: string;
   budgetUsedPercent: number;
   budgetLimit: number;
-  setView?: (view: string) => void;
 }
 
 const DashboardInsightsWidget = memo(function DashboardInsightsWidget({
-  aiTip, topExpenseCategory, budgetUsedPercent, budgetLimit, setView
+  aiTip, topExpenseCategory, budgetUsedPercent, budgetLimit
 }: DashboardInsightsWidgetProps) {
   const barColor = budgetUsedPercent >= 90 ? '#ef4444' : budgetUsedPercent >= 70 ? '#f97316' : '#10b981';
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[1.5rem] p-4 shadow-sm space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-            <BarChart2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <h2 className="font-black text-slate-800 dark:text-white text-sm">Spending Insights</h2>
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+          <BarChart2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
         </div>
-        {setView && (
-          <button
-            onClick={() => setView('spending-insights')}
-            className="text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:underline flex items-center gap-1"
-          >
-            View All <ArrowRight className="w-3 h-3" />
-          </button>
-        )}
+        <h2 className="font-black text-slate-800 dark:text-white text-sm">Spending Insights</h2>
       </div>
 
       <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 flex items-center gap-3">
