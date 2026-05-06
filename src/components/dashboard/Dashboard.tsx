@@ -363,6 +363,7 @@ export default function Dashboard({ setView, user, setUser }: DashboardProps) {
           topExpenseCategory={topExpenseCategory}
           budgetUsedPercent={budgetUsedPercent}
           budgetLimit={budgetLimit}
+          setView={setView}
         />
         <div className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl border border-white/60 dark:border-slate-700/60 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">

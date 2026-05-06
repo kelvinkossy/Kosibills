@@ -52,6 +52,7 @@ const SupportChat = lazy(() => import('./components/support/SupportChat'));
 const Transfer = lazy(() => import('./components/payments/Transfer'));
 const LandingPage = lazy(() => import('./components/landing/LandingPage'));
 const Analytics = lazy(() => import('./components/dashboard/Analytics'));
+const SpendingInsights = lazy(() => import('./components/dashboard/SpendingInsights'));
 
 import { getCurrentSeason, getSeasonStyles } from './utils/seasons';
 import Logo from './components/common/Logo';
@@ -489,6 +490,7 @@ function AppContent() {
       case 'settings': return <Settings user={user} setUser={updateUser} onLogout={handleLogout} setView={navigateTo} />;
       case 'terms': return <TermsAndPolicies onBack={navigateBack} />;
       case 'analytics': return <Analytics />;
+      case 'spending-insights': return <SpendingInsights user={user} />;
       default: return <Dashboard setView={navigateTo} user={user} setUser={updateUser} />;
     }
   };

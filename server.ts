@@ -157,6 +157,11 @@ db.exec(`
     db.exec('ALTER TABLE users ADD COLUMN reset_token_expiry TEXT;');
   } catch(e) { /* ignore duplicate column error */ }
   try {
+    db.exec('ALTER TABLE transactions ADD COLUMN category TEXT;');
+  } catch(e) { /* ignore duplicate column error */ }
+
+  // Create transaction categories table
+  try {
     db.exec('ALTER TABLE users ADD COLUMN birthday TEXT;');
   } catch(e) { /* ignore duplicate column error */ }
 
