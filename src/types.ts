@@ -1,4 +1,4 @@
-export type View = 'dashboard' | 'rewards' | 'recommended' | 'bills' | 'settings' | 'airtime' | 'data' | 'electricity' | 'cable' | 'history' | 'terms' | 'betting' | 'internet' | 'sub-wallets' | 'education' | 'other-utilities' | 'admin' | 'agent' | 'customer_care' | 'support' | 'policies' | 'transfer';
+export type View = 'dashboard' | 'rewards' | 'recommended' | 'bills' | 'settings' | 'airtime' | 'data' | 'electricity' | 'cable' | 'history' | 'terms' | 'betting' | 'internet' | 'sub-wallets' | 'education' | 'other-utilities' | 'admin' | 'agent' | 'customer_care' | 'support' | 'policies' | 'transfer' | 'analytics';
 
 export type AccountTier = 'Basic' | 'Silver' | 'Gold' | 'Premium';
 

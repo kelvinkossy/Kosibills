@@ -51,6 +51,7 @@ const ResetPassword = lazy(() => import('./components/auth/ResetPassword'));
 const SupportChat = lazy(() => import('./components/support/SupportChat'));
 const Transfer = lazy(() => import('./components/payments/Transfer'));
 const LandingPage = lazy(() => import('./components/landing/LandingPage'));
+const Analytics = lazy(() => import('./components/dashboard/Analytics'));
 
 import { getCurrentSeason, getSeasonStyles } from './utils/seasons';
 import Logo from './components/common/Logo';
@@ -480,13 +481,14 @@ function AppContent() {
         }
       }} />;
       case 'transfer': return <Transfer user={user} setView={navigateTo} setUser={updateUser} />;
-      case 'admin': return <AdminDashboard user={user} onBack={navigateBack} />;
+      case 'admin': return <AdminDashboard user={user} onBack={navigateBack} setView={navigateTo} />;
       case 'agent': return <AgentDashboard user={user} setView={navigateTo} />;
       case 'customer_care': return <CustomerCareDashboard user={user} />;
       case 'support': return <SupportChat user={user} />;
       case 'policies': return <Policies />;
       case 'settings': return <Settings user={user} setUser={updateUser} onLogout={handleLogout} setView={navigateTo} />;
       case 'terms': return <TermsAndPolicies onBack={navigateBack} />;
+      case 'analytics': return <Analytics />;
       default: return <Dashboard setView={navigateTo} user={user} setUser={updateUser} />;
     }
   };

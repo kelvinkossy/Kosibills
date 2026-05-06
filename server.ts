@@ -3187,6 +3187,92 @@ Kosi Bills is a Nigerian fintech app that lets users pay all their bills from on
     }
   });
 
+  // Analytics API endpoints
+  app.get('/api/analytics/overview', requireAdmin, (req, res) => {
+    try {
+      const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get() as any;
+      const activeUsers = db.prepare("SELECT COUNT(*) as count FROM users WHERE account_status = 'active'").get() as any;
+      const totalRevenue = db.prepare('SELECT SUM(amount) as total FROM transactions WHERE type = ? AND status = ?').get('Wallet Fund', 'success') as any;
+      const todayRevenue = db.prepare('SELECT SUM(amount) as total FROM transactions WHERE type = ? AND status = ? AND date >= ?').get('Wallet Fund', 'success', new Date().toISOString().split('T')[0]) as any;
+      const totalTransactions = db.prepare('SELECT COUNT(*) as count FROM transactions').get() as any;
+      const todayTransactions = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE date >= ?').get(new Date().toISOString().split('T')[0]) as any;
+
+      res.json({
+        success: true,
+        data: {
+          totalUsers: totalUsers.count,
+          activeUsers: activeUsers.count,
+          totalRevenue: totalRevenue.total || 0,
+          todayRevenue: todayRevenue.total || 0,
+          totalTransactions: totalTransactions.count,
+          todayTransactions: todayTransactions.count
+        }
+      });
+    } catch (error) {
+      logger.error('[ANALYTICS] Failed to fetch overview', { error });
+      res.status(500).json({ error: 'Failed to fetch analytics data' });
+    }
+  });
+
+  app.get('/api/analytics/revenue-trend', requireAdmin, (req, res) => {
+    try {
+      const { days = 30 } = req.query;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - Number(days));
+
+      const revenueData = db.prepare(`
+        SELECT DATE(date) as date, SUM(amount) as revenue
+        FROM transactions
+        WHERE type = ? AND status = ? AND date >= ?
+        GROUP BY DATE(date)
+        ORDER BY date ASC
+      `).all('Wallet Fund', 'success', startDate.toISOString()) as any[];
+
+      res.json({ success: true, data: revenueData });
+    } catch (error) {
+      logger.error('[ANALYTICS] Failed to fetch revenue trend', { error });
+      res.status(500).json({ error: 'Failed to fetch revenue trend' });
+    }
+  });
+
+  app.get('/api/analytics/user-growth', requireAdmin, (req, res) => {
+    try {
+      const { days = 30 } = req.query;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - Number(days));
+
+      const userGrowth = db.prepare(`
+        SELECT DATE(created_at) as date, COUNT(*) as users
+        FROM users
+        WHERE created_at >= ?
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC
+      `).all(startDate.toISOString()) as any[];
+
+      res.json({ success: true, data: userGrowth });
+    } catch (error) {
+      logger.error('[ANALYTICS] Failed to fetch user growth', { error });
+      res.status(500).json({ error: 'Failed to fetch user growth' });
+    }
+  });
+
+  app.get('/api/analytics/transaction-breakdown', requireAdmin, (req, res) => {
+    try {
+      const breakdown = db.prepare(`
+        SELECT type, category, COUNT(*) as count, SUM(amount) as total
+        FROM transactions
+        WHERE status = ?
+        GROUP BY type, category
+        ORDER BY total DESC
+      `).all('success') as any[];
+
+      res.json({ success: true, data: breakdown });
+    } catch (error) {
+      logger.error('[ANALYTICS] Failed to fetch transaction breakdown', { error });
+      res.status(500).json({ error: 'Failed to fetch transaction breakdown' });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
